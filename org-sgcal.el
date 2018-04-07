@@ -26,13 +26,23 @@
   :group 'org-sgcal
   :type 'string) 
 
+(defvar org-sgcal-token-plist nil)
+
+(defun org-sgcal-refresh-token ()
+  "refresh token and store tokens into `org-sgcal-token-list'. "
+  (let ((ele-buffer (org-element-parse-buffer)))
+    (org-element-map)))
+
+
+
+;;; http request functions
 (defun org-sgcal-request-authorization (client-id)
   "Request OAuth authorization at AUTH-URL by launching `browse-url'.
 CLIENT-ID is the client id provided by the provider.
 It returns the code provided by the service."
   (browse-url
    (concat org-sgcal-auth-url
-           "?client_id=" (url-hexify-string )
+           "?client_id=" (url-hexify-string)
            "&response_type=code"
            "&redirect_uri=" (url-hexify-string "urn:ietf:wg:oauth:2.0:oob")
            "&scope=" (url-hexify-string org-sgcal-resource-url)))
@@ -56,10 +66,6 @@ It returns the code provided by the service."
    :error
    (cl-function (lambda (&key error-thrown &allow-other-keys)
                 (message "Got error: %S" error-thrown)))))
-
-(defun org-sgcal--get-events-url (cid)
-  "Internal function, return calendar url by calendar id"
-  (format org-sgcal-events-url cid))
 
 (defun org-sgcal-get-event-list (cid a-token min max)
   "Get event list from calendar"
@@ -120,6 +126,14 @@ It returns the code provided by the service."
                (message "Got error: %S" error-thrown)
                nil))))
 
+
+
+;;; internal functions
+(defun org-sgcal--get-events-url (cid)
+  "Internal function, return calendar url by calendar id"
+  (format org-sgcal-events-url cid))
+
+
 ;;; org-scgcal tools
 (defun org-sgcal-replace-element (ele-A ele-B)
   "replace ele-A to ele-B in current buffer
@@ -131,7 +145,7 @@ ele-A must be a element exists in current buffer"
     (delete-region beg-A end-A)
     (insert body-B)))
 
-(defun org-sgcal-create-headline (head properties contents start end)
+(defun org-sgcal-create-headline (head &optional properties contents start end)
   "head is a list which contains (title level todo-keyword)
 
 property is a list of pair which contains key and value,
@@ -157,37 +171,41 @@ contents is org struct text below property drawer
 	  (todok (nth 2 head)))
       (setq e-head (org-element-put-property e-head :title title))
       (setq e-head (org-element-put-property e-head :level level))
-      (setq e-head (org-element-put-property e-head :todo-keyword todok)))
+      (when todok
+	(setq e-head (org-element-put-property e-head :todo-keyword todok))))
 
     ;; set planning
-    (let ((s-stamp (org-element-create 'timestamp))
-	  (e-stamp (org-element-create 'timestamp)))
-      (setq e-stamp (org-element-put-property e-stamp :type 'active))
-      (setq e-stamp (org-element-put-property e-stamp :year-start (nth 0 end)))
-      (setq e-stamp (org-element-put-property e-stamp :month-start (nth 1 end)))
-      (setq e-stamp (org-element-put-property e-stamp :day-start (nth 2 end)))
-      
-      (setq s-stamp (org-element-put-property s-stamp :type 'active))
-      (setq s-stamp (org-element-put-property s-stamp :year-start (nth 0 start)))
-      (setq s-stamp (org-element-put-property s-stamp :month-start (nth 1 start)))
-      (setq s-stamp (org-element-put-property s-stamp :day-start (nth 2 start)))
-
-      (setq e-plan (org-element-put-property e-plan :scheduled s-stamp))
-      (setq e-plan (org-element-put-property e-plan :deadline e-stamp)))
+    (let ((s-stamp (if start (org-element-create 'timestamp) nil))
+	  (e-stamp (if end (org-element-create 'timestamp) nil)))
+      (when start
+	(setq s-stamp (org-element-put-property s-stamp :type 'active))
+	(setq s-stamp (org-element-put-property s-stamp :year-start (nth 0 start)))
+	(setq s-stamp (org-element-put-property s-stamp :month-start (nth 1 start)))
+	(setq s-stamp (org-element-put-property s-stamp :day-start (nth 2 start)))
+	(setq e-plan (org-element-put-property e-plan :scheduled s-stamp)))
+      (when end
+	(setq e-stamp (org-element-put-property e-stamp :type 'active))
+	(setq e-stamp (org-element-put-property e-stamp :year-start (nth 0 end)))
+	(setq e-stamp (org-element-put-property e-stamp :month-start (nth 1 end)))
+	(setq e-stamp (org-element-put-property e-stamp :day-start (nth 2 end)))
+	(setq e-plan (org-element-put-property e-plan :deadline e-stamp))))
     
     ;; create and set node properties
-    (dolist (p properties)
-      (let ((node (org-element-create 'node-property)))
-	(setq node (org-element-put-property node :key (car p)))
-	(setq node (org-element-put-property node :value (cadr p)))
-	(setq e-draw (org-element-adopt-elements e-draw node))))
+    (when properties
+	(dolist (p properties)
+	  (let ((node (org-element-create 'node-property)))
+	    (setq node (org-element-put-property node :key (car p)))
+	    (setq node (org-element-put-property node :value (cadr p)))
+	    (setq e-draw (org-element-adopt-elements e-draw node)))))
 
     ;; set paragraph
-    (setq e-para (org-element-set-contents e-para contents))
+    (when contents
+      (setq e-para (org-element-set-contents e-para contents)))
 
     ;; set section
     (setq e-sect (org-element-adopt-elements e-sect e-plan))
-    (setq e-sect (org-element-adopt-elements e-sect e-draw))
+    (when properties
+      (setq e-sect (org-element-adopt-elements e-sect e-draw)))
     (setq e-sect (org-element-adopt-elements e-sect e-para))
     (setq e-head (org-element-adopt-elements e-head e-sect))
     e-head))
