@@ -1,6 +1,5 @@
-(require 'alert)
 (require 'json)
-(require 'request-deferred)
+(require 'request)
 (require 'org-element)
 (require 'org-archive)
 (require 'cl-lib)
@@ -108,6 +107,7 @@ It returns the code provided by the service."
                data))))
 
 (defun org-sgcal-delete-event (cid eid a-token client-secret)
+  "delete specify event from calendar"
   (request
    (concat (org-sgcal--get-events-url cid) "/" eid)
    :type "DELETE"
@@ -118,11 +118,79 @@ It returns the code provided by the service."
    :error (cl-function
              (lambda (&key error-thrown &allow-other-keys)
                (message "Got error: %S" error-thrown)
-               nil))
-   :success (cl-function
-             (lambda (&key data &allow-other-keys)
-               data))))
+               nil))))
+
+;;; org-scgcal tools
+(defun org-sgcal-replace-element (ele-A ele-B)
+  "replace ele-A to ele-B in current buffer
+ele-A must be a element exists in current buffer"
+  (let ((beg-A (org-element-property :begin ele-A))
+	(end-A (org-element-property :end ele-A))
+	(body-B (org-element-interpret-data ele-B)))
+    (goto-char beg-A)
+    (delete-region beg-A end-A)
+    (insert body-B)))
+
+(defun org-sgcal-create-headline (head properties contents start end)
+  "head is a list which contains (title level todo-keyword)
+
+property is a list of pair which contains key and value,
+for example property can be: '((\"key1\" \"test\") (\"key2\" \"123\"))
+which will shows in org document as below
+
+start/end is a list contain date scheduled/deadline which formats as (year month day)
+:PROPERTIES:
+:key1: test
+:key2: 123
+:END:
+
+contents is 
+"
+  (let ((e-head (org-element-create 'headline))
+	(e-sect (org-element-create 'section))
+	(e-draw (org-element-create 'property-drawer))
+	(e-para (org-element-create 'paragraph))
+	(e-plan (org-element-create 'planning)))
+    ;; set headline
+    (let ((title (nth 0 head))
+	  (level (nth 1 head))
+	  (todok (nth 2 head)))
+      (setq e-head (org-element-put-property e-head :title title))
+      (setq e-head (org-element-put-property e-head :level level))
+      (setq e-head (org-element-put-property e-head :todo-keyword todok)))
+
+    ;; set planning
+    (let ((s-stamp (org-element-create 'timestamp))
+	  (e-stamp (org-element-create 'timestamp)))
+      (setq e-stamp (org-element-put-property e-stamp :type 'active))
+      (setq e-stamp (org-element-put-property e-stamp :year-start (nth 0 end)))
+      (setq e-stamp (org-element-put-property e-stamp :month-start (nth 1 end)))
+      (setq e-stamp (org-element-put-property e-stamp :day-start (nth 2 end)))
+      
+      (setq s-stamp (org-element-put-property s-stamp :type 'active))
+      (setq s-stamp (org-element-put-property s-stamp :year-start (nth 0 start)))
+      (setq s-stamp (org-element-put-property s-stamp :month-start (nth 1 start)))
+      (setq s-stamp (org-element-put-property s-stamp :day-start (nth 2 start)))
+
+      (setq e-plan (org-element-put-property e-plan :scheduled s-stamp))
+      (setq e-plan (org-element-put-property e-plan :deadline e-stamp)))
+    
+    ;; create and set node properties
+    (dolist (p properties)
+      (let ((node (org-element-create 'node-property)))
+	(setq node (org-element-put-property node :key (car p)))
+	(setq node (org-element-put-property node :value (cadr p)))
+	(setq e-draw (org-element-adopt-elements e-draw node))))
+
+    ;; set paragraph
+    (setq e-para (org-element-set-contents e-para contents))
+
+    ;; set section
+    (setq e-sect (org-element-set-contents e-sect e-plan))
+    (setq e-sect (org-element-adopt-elements e-sect e-draw))
+    (setq e-sect (org-element-adopt-elements e-sect e-para))
+    (setq e-head (org-element-set-contents e-head e-sect))
+    e-head))
 
 (provide 'org-sgcal)
-
 ;;; org-sgcal.el ends here
