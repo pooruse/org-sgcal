@@ -138,13 +138,13 @@ property is a list of pair which contains key and value,
 for example property can be: '((\"key1\" \"test\") (\"key2\" \"123\"))
 which will shows in org document as below
 
-start/end is a list contain date scheduled/deadline which formats as (year month day)
 :PROPERTIES:
 :key1: test
 :key2: 123
 :END:
 
-contents is 
+start/end is a list contain date scheduled/deadline which formats as (year month day)
+contents is org struct text below property drawer
 "
   (let ((e-head (org-element-create 'headline))
 	(e-sect (org-element-create 'section))
