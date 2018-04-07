@@ -186,10 +186,10 @@ contents is
     (setq e-para (org-element-set-contents e-para contents))
 
     ;; set section
-    (setq e-sect (org-element-set-contents e-sect e-plan))
+    (setq e-sect (org-element-adopt-elements e-sect e-plan))
     (setq e-sect (org-element-adopt-elements e-sect e-draw))
     (setq e-sect (org-element-adopt-elements e-sect e-para))
-    (setq e-head (org-element-set-contents e-head e-sect))
+    (setq e-head (org-element-adopt-elements e-head e-sect))
     e-head))
 
 (provide 'org-sgcal)
