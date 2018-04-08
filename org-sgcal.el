@@ -139,17 +139,22 @@ It returns the code provided by the service."
 
 (defun org-sgcal-delete-event (cid eid a-token client-secret)
   "delete specify event from calendar"
-  (request
-   (concat (org-sgcal--get-events-url cid) "/" eid)
-   :sync t
-   :type "DELETE"
-   :headers '(("Content-Type" . "application/json"))
-   :params `(("access_token" . ,a-token)
-             ("key" . ,client-secret)
-             ("grant_type" . "authorization_code"))
-   :error (cl-function
-	   (lambda (&key error-thrown &allow-other-keys)
-	     (message (format "Error code: %s" error-thrown))))))
+  (let (out)
+    (request
+     (concat (org-sgcal--get-events-url cid) "/" eid)
+     :sync t
+     :type "DELETE"
+     :headers '(("Content-Type" . "application/json"))
+     :params `(("access_token" . ,a-token)
+	       ("key" . ,client-secret)
+	       ("grant_type" . "authorization_code"))
+     :success (cl-function
+	       (lambda (&key data &allow-other-keys)
+		 (setq out t)))
+     :error (cl-function
+	     (lambda (&key error-thrown &allow-other-keys)
+	       (message (format "Error code: %s" error-thrown)))))
+    out))
 
 
 ;;; internal functions
