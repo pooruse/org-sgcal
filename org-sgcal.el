@@ -119,8 +119,8 @@ It returns the code provided by the service."
      :sync t
      :type (if eid "PATCH" "POST")
      :headers '(("Content-Type" . "application/json"))
-     :data (json-encode `(("start" ("dateTime" . ,start) ("timeZone" . ,org-sgcal-timezone))
-			  ("end" ("dateTime" ,end) ("timeZone" . ,org-sgcal-timezone))
+     :data (json-encode `(("start" ("date" . ,start) ("timeZone" . ,org-sgcal-timezone))
+			  ("end" ("date" ,end) ("timeZone" . ,org-sgcal-timezone))
 			  ("summary" . ,smry)
 			  ("location" . ,loc)
 			  ("description" . ,desc)))
