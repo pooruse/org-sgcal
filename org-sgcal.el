@@ -87,7 +87,7 @@ It returns the code provided by the service."
 
 (defun org-sgcal-get-event-list (cid client-secret a-token min max)
   "Get event list from calendar"
-  (let (out)
+  (let (data)
     (request
      (org-sgcal--get-events-url cid)
      :sync t
@@ -101,11 +101,12 @@ It returns the code provided by the service."
 	       ("grant_type" . "authorization_code"))
      :parser 'json-read
      :success (cl-function
-	       (lambda (&key data &allow-other-keys)
-		 data))
+	       (lambda (&key response &allow-other-keys)
+		 (setq data (request-response-data response))))
      :error
      (cl-function (lambda (&key error-thrown &allow-other-keys)
-		    (message (format "Error code: %s" error-thrown)))))))
+		    (message (format "Error code: %s" error-thrown)))))
+    data))
 
 (defun org-sgcal-post-event (cid start end smry loc desc
                                  a-token client-secret
