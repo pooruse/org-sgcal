@@ -1,7 +1,7 @@
 (defun test-org-element ()
   "print current buffer org struct in *scratch"
   (interactive)
-  (let ((ele (org-element-parse-buffer)))
+  (let ((ele (org-element-at-point)))
     (test-helper ele)))
 
 (defun test-helper (ele)

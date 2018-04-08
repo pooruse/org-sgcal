@@ -28,11 +28,6 @@
 
 (defvar org-sgcal-token-plist nil)
 
-(defun org-sgcal-refresh-token ()
-  "refresh token and store tokens into `org-sgcal-token-list'. "
-  (let ((ele-buffer (org-element-parse-buffer)))
-    (org-element-map)))
-
 
 
 ;;; http request functions
@@ -42,7 +37,7 @@ CLIENT-ID is the client id provided by the provider.
 It returns the code provided by the service."
   (browse-url
    (concat org-sgcal-auth-url
-           "?client_id=" (url-hexify-string)
+           "?client_id=" (url-hexify-string client-id)
            "&response_type=code"
            "&redirect_uri=" (url-hexify-string "urn:ietf:wg:oauth:2.0:oob")
            "&scope=" (url-hexify-string org-sgcal-resource-url)))
@@ -51,39 +46,66 @@ It returns the code provided by the service."
 
 (defun org-sgcal-request-token (client-id client-secret)
   "Request OAuth access at TOKEN-URL."
-  (request
-   org-sgcal-token-url
-   :type "POST"
-   :data `(("client_id" . ,client-id)
-           ("client_secret" . ,client-secret)
-           ("code" . ,(org-sgcal-request-authorization))
-           ("redirect_uri" .  "urn:ietf:wg:oauth:2.0:oob")
-           ("grant_type" . "authorization_code"))
-   :parser 'json-read
-   :success (cl-function
-             (lambda (&key data &allow-other-keys)
-               data))
-   :error
-   (cl-function (lambda (&key error-thrown &allow-other-keys)
-                (message "Got error: %S" error-thrown)))))
+  (let (data)
+    (request
+     org-sgcal-token-url
+     :sync t
+     :type "POST"
+     :data `(("client_id" . ,client-id)
+	     ("client_secret" . ,client-secret)
+	     ("code" . ,(org-sgcal-request-authorization client-id))
+	     ("redirect_uri" .  "urn:ietf:wg:oauth:2.0:oob")
+	     ("grant_type" . "authorization_code"))
+     :parser 'json-read
+     :success (cl-function
+	       (lambda (&key response &allow-other-keys)
+		 (setq data (request-response-data response))))
+     :error
+     (cl-function (lambda (&key error-thrown &allow-other-keys)
+		    (message (format "Error code: %s" error-thrown)))))
+    data))
 
-(defun org-sgcal-get-event-list (cid a-token min max)
+(defun org-sgcal-refresh-token (client-id client-secret refresh-token)
+  "refresh google api auth 2 token"
+  (let (data)
+    (request
+     org-sgcal-token-url
+     :sync t
+     :type "POST"
+     :data `(("client_id" . ,client-id)
+	     ("client_secret" . ,client-secret)
+	     ("refresh_token" . ,refresh-token)
+	     ("grant_type" . "refresh_token"))
+     :parser 'json-read
+     :success (cl-function
+	       (lambda (&key response &allow-other-keys)
+		 (setq data (request-response-data response))))
+     :error
+     (cl-function (lambda (&key error-thrown &allow-other-keys)
+		    (message (format "Error code: %s" error-thrown)))))
+    data))
+
+(defun org-sgcal-get-event-list (cid client-secret a-token min max)
   "Get event list from calendar"
-  (request
-   (org-sgcal--get-events-url cid)
-   :type "GET"
-   :params `(("access_token" . ,a-token)
-             ("key" . ,org-gcal-client-secret)
-             ("singleEvents" . "True")
-             ("orderBy" . "startTime")
-             ("timeMin" . ,min)
-             ("timeMax" . ,max)
-             ("grant_type" . "authorization_code"))
-   :parser 'json-read
-   :error
-   (cl-function (lambda (&key error-thrown &allow-other-keys)
-                  (message "Got error: %S" error-thrown)
-                  nil))))
+  (let (out)
+    (request
+     (org-sgcal--get-events-url cid)
+     :sync t
+     :type "GET"
+     :params `(("access_token" . ,a-token)
+	       ("key" . ,client-secret)
+	       ("singleEvents" . "True")
+	       ("orderBy" . "startTime")
+	       ("timeMin" . ,min)
+	       ("timeMax" . ,max)
+	       ("grant_type" . "authorization_code"))
+     :parser 'json-read
+     :success (cl-function
+	       (lambda (&key data &allow-other-keys)
+		 data))
+     :error
+     (cl-function (lambda (&key error-thrown &allow-other-keys)
+		    (message (format "Error code: %s" error-thrown)))))))
 
 (defun org-sgcal-post-event (cid start end smry loc desc
                                  a-token client-secret
@@ -92,6 +114,7 @@ It returns the code provided by the service."
   (request
    (concat (org-sgcal--get-events-url cid)
            (when eid (concat "/" eid)))
+   :sync t
    :type (if id "PATCH" "POST")
    :headers '(("Content-Type" . "application/json"))
    :data (json-encode `(("start" ("dateTime" . ,start) ("timeZone" . ,org-sgcal-timezone))
@@ -105,9 +128,9 @@ It returns the code provided by the service."
 
    :parser 'json-read
    :error (cl-function
-             (lambda (&key error-thrown &allow-other-keys)
-               (message "Got error: %S" error-thrown)
-               nil))
+	   (lambda (&key error-thrown &allow-other-keys)
+	     (throw 'http error-thrown)
+	     nil))
    :success (cl-function
              (lambda (&key data &allow-other-keys)
                data))))
@@ -116,16 +139,15 @@ It returns the code provided by the service."
   "delete specify event from calendar"
   (request
    (concat (org-sgcal--get-events-url cid) "/" eid)
+   :sync t
    :type "DELETE"
    :headers '(("Content-Type" . "application/json"))
    :params `(("access_token" . ,a-token)
              ("key" . ,client-secret)
              ("grant_type" . "authorization_code"))
    :error (cl-function
-             (lambda (&key error-thrown &allow-other-keys)
-               (message "Got error: %S" error-thrown)
-               nil))))
-
+	   (lambda (&key error-thrown &allow-other-keys)
+	     (message (format "Error code: %s" error-thrown))))))
 
 
 ;;; internal functions
