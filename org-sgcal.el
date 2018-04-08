@@ -112,29 +112,30 @@ It returns the code provided by the service."
                                  a-token client-secret
                                  &optional eid)
   "post or update event in specify calendar(depends on eid). "
-  (request
-   (concat (org-sgcal--get-events-url cid)
-           (when eid (concat "/" eid)))
-   :sync t
-   :type (if id "PATCH" "POST")
-   :headers '(("Content-Type" . "application/json"))
-   :data (json-encode `(("start" ("dateTime" . ,start) ("timeZone" . ,org-sgcal-timezone))
-                        ("end" ("dateTime" ,end) ("timeZone" . ,org-sgcal-timezone))
-                        ("summary" . ,smry)
-                        ("location" . ,loc)
-                        ("description" . ,desc)))
-   :params `(("access_token" . ,a-token)
-             ("key" . ,client-secret)
-             ("grant_type" . "authorization_code"))
+  (let (data)
+    (request
+     (concat (org-sgcal--get-events-url cid)
+	     (when eid (concat "/" eid)))
+     :sync t
+     :type (if eid "PATCH" "POST")
+     :headers '(("Content-Type" . "application/json"))
+     :data (json-encode `(("start" ("dateTime" . ,start) ("timeZone" . ,org-sgcal-timezone))
+			  ("end" ("dateTime" ,end) ("timeZone" . ,org-sgcal-timezone))
+			  ("summary" . ,smry)
+			  ("location" . ,loc)
+			  ("description" . ,desc)))
+     :params `(("access_token" . ,a-token)
+	       ("key" . ,client-secret)
+	       ("grant_type" . "authorization_code"))
 
-   :parser 'json-read
-   :error (cl-function
-	   (lambda (&key error-thrown &allow-other-keys)
-	     (throw 'http error-thrown)
-	     nil))
-   :success (cl-function
-             (lambda (&key data &allow-other-keys)
-               data))))
+     :parser 'json-read
+     :error (cl-function
+	     (lambda (&key error-thrown &allow-other-keys)
+	       (message (format "Get error: %s" error-thrown))))
+     :success (cl-function
+	       (lambda (&key response &allow-other-keys)
+		 (setq data (request-response-data response)))))
+    data))
 
 (defun org-sgcal-delete-event (cid eid a-token client-secret)
   "delete specify event from calendar"
