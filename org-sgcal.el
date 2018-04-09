@@ -247,7 +247,36 @@ contents is org struct text below property drawer
     (setq e-head (org-element-adopt-elements e-head e-sect))
     e-head))
 
-
+(defun org-sgcal--parse-event-list (response-json level)
+  "Parse event list from google api, get event list
+to org element AVL tree
+LEVEL will set to each headline"
+  (let ((items (cdr (assoc 'items response-json)))
+        (parse (lambda (item)
+                 (let ((id (cdr (assoc 'id item)))
+                       (sumy (cdr (assoc 'summary item)))
+                       (desc (cdr (assoc 'description item)))
+                       (start (cdr (assoc 'start item)))
+                       (end (cdr (assoc 'end item))))
+                   (let ((start-time
+                          (cond ((assoc 'date start)
+                                 (parse-time-string (cdr (assoc 'date start))))
+                                ((assoc 'dateTime start)
+                                 (decode-time (date-to-time (cdr (assoc 'dateTime start)))))
+                                (t nil)))
+                         (end-time
+                          (cond ((assoc 'date end)
+                                 (parse-time-string (cdr (assoc 'date end))))
+                                ((assoc 'dateTime end)
+                                 (decode-time (date-to-time (cdr (assoc 'dateTime end)))))
+                                (t nil)))
+                         )
+                     (org-sgcal-create-headline `(,sumy ,level nil)
+                                                `(("ID" . ,id))
+                                                desc
+                                                start-time
+                                                end-time))))))
+    (mapcar parse items)))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
