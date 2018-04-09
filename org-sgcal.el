@@ -232,7 +232,7 @@ contents is org struct text below property drawer
 	(dolist (p properties)
 	  (let ((node (org-element-create 'node-property)))
 	    (setq node (org-element-put-property node :key (car p)))
-	    (setq node (org-element-put-property node :value (cadr p)))
+	    (setq node (org-element-put-property node :value (cdr p)))
 	    (setq e-draw (org-element-adopt-elements e-draw node)))))
 
     ;; set paragraph

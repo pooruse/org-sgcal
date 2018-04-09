@@ -17,7 +17,7 @@ create correct org string"
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal-create-headline '("test" 1 "TODO")
-				      '(("proper1" 1234) ("proper2" "abcde"))
+				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      '(nil nil nil 4 4 2018)
 				      '(nil nil nil 3 5 2018)))
@@ -44,7 +44,7 @@ Oh my god!
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal-create-headline '("test" 1 "TODO")
-				      '(("proper1" 1234) ("proper2" "abcde"))
+				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      nil
 				      '(nil nil nil 3 5 2018)))
@@ -60,7 +60,7 @@ Oh my god!
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal-create-headline '("test" 1 "TODO")
-				      '(("proper1" 1234) ("proper2" "abcde"))
+				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      nil
 				      nil))
@@ -74,7 +74,7 @@ Oh my god!
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal-create-headline '("test" 1 nil)
-				      '(("proper1" 1234) ("proper2" "abcde"))
+				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      nil
 				      nil))
@@ -89,7 +89,7 @@ Oh my god!
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal-create-headline '("test" 1 "TODO")
-				      '(("proper1" 1234) ("proper2" "abcde"))
+				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      '(nil 40 3 4 4 2018)
 				      '(nil 50 4 3 5 2018)))
