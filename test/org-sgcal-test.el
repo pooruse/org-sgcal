@@ -19,8 +19,8 @@ create correct org string"
 	   (org-sgcal-create-headline '("test" 1 "TODO")
 				      '(("proper1" 1234) ("proper2" "abcde"))
 				      "Oh my god!"
-				      '(2018 4 4)
-				      '(2018 5 3)))
+				      '(nil nil nil 4 4 2018)
+				      '(nil nil nil 3 5 2018)))
 	  "* TODO test
 DEADLINE: <2018-05-03 四> SCHEDULED: <2018-04-04 三>
 :PROPERTIES:
@@ -34,8 +34,8 @@ Oh my god!
 	     (org-sgcal-create-headline '("test" 1 "TODO")
 					nil
 					"Oh my god!"
-					'(2018 4 4)
-					'(2018 5 3)))
+					'(nil nil nil 4 4 2018)
+					'(nil nil nil 3 5 2018)))
 	    "* TODO test
 DEADLINE: <2018-05-03 四> SCHEDULED: <2018-04-04 三>
 Oh my god!
@@ -47,7 +47,7 @@ Oh my god!
 				      '(("proper1" 1234) ("proper2" "abcde"))
 				      "Oh my god!"
 				      nil
-				      '(2018 5 3)))
+				      '(nil nil nil 3 5 2018)))
 	  "* TODO test
 DEADLINE: <2018-05-03 四>
 :PROPERTIES:
@@ -91,8 +91,8 @@ Oh my god!
 	   (org-sgcal-create-headline '("test" 1 "TODO")
 				      '(("proper1" 1234) ("proper2" "abcde"))
 				      "Oh my god!"
-				      '(2018 4 4 3 40)
-				      '(2018 5 3 4 50)))
+				      '(nil 40 3 4 4 2018)
+				      '(nil 50 4 3 5 2018)))
 	  "* TODO test
 DEADLINE: <2018-05-03 四 04:50> SCHEDULED: <2018-04-04 三 03:40>
 :PROPERTIES:

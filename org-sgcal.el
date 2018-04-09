@@ -187,7 +187,9 @@ which will shows in org document as below
 :key2: 123
 :END:
 
-start/end is a list contain date scheduled/deadline which formats as (year month day)
+start/end is a list contain date scheduled/deadline which formats
+as (SEC MIN HOUR DAY MON YEAR DOW DST TZ). The values are identical to those of `decode-time'.
+If any values that are unknown, please set it to nil.
 contents is org struct text below property drawer
 "
   (let ((e-head (org-element-create 'headline))
@@ -209,23 +211,20 @@ contents is org struct text below property drawer
 	  (e-stamp (if end (org-element-create 'timestamp) nil)))
       (when start
 	(setq s-stamp (org-element-put-property s-stamp :type 'active))
-	(setq s-stamp (org-element-put-property s-stamp :year-start (nth 0 start)))
-	(setq s-stamp (org-element-put-property s-stamp :month-start (nth 1 start)))
-	(setq s-stamp (org-element-put-property s-stamp :day-start (nth 2 start)))
-        (when (= (length start) 5)
-          (setq s-stamp (org-element-put-property s-stamp :hour-start (nth 3 start)))
-          (setq s-stamp (org-element-put-property s-stamp :minute-start (nth 4 start))))
+	(setq s-stamp (org-element-put-property s-stamp :year-start (nth 5 start)))
+	(setq s-stamp (org-element-put-property s-stamp :month-start (nth 4 start)))
+	(setq s-stamp (org-element-put-property s-stamp :day-start (nth 3 start)))
+        (setq s-stamp (org-element-put-property s-stamp :hour-start (nth 2 start)))
+        (setq s-stamp (org-element-put-property s-stamp :minute-start (nth 1 start)))
         
 	(setq e-plan (org-element-put-property e-plan :scheduled s-stamp)))
       (when end
 	(setq e-stamp (org-element-put-property e-stamp :type 'active))
-	(setq e-stamp (org-element-put-property e-stamp :year-start (nth 0 end)))
-	(setq e-stamp (org-element-put-property e-stamp :month-start (nth 1 end)))
-	(setq e-stamp (org-element-put-property e-stamp :day-start (nth 2 end)))
-        (when (= (length start) 5)
-          (setq s-stamp (org-element-put-property e-stamp :hour-start (nth 3 end)))
-          (setq s-stamp (org-element-put-property e-stamp :minute-start (nth 4 end))))
-        
+	(setq e-stamp (org-element-put-property e-stamp :year-start (nth 5 end)))
+	(setq e-stamp (org-element-put-property e-stamp :month-start (nth 4 end)))
+	(setq e-stamp (org-element-put-property e-stamp :day-start (nth 3 end)))
+        (setq s-stamp (org-element-put-property e-stamp :hour-start (nth 2 end)))
+        (setq s-stamp (org-element-put-property e-stamp :minute-start (nth 1 end)))
 	(setq e-plan (org-element-put-property e-plan :deadline e-stamp))))
     
     ;; create and set node properties
