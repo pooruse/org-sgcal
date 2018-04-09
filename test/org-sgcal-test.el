@@ -144,3 +144,38 @@ DEADLINE: <2018-07-03 四> SCHEDULED: <2018-04-04 三>
 Oh my godness!
 ")))
  
+(ert-deftest test-org-sgcal/parse-event-list ()
+  
+  "Test for org-sgcal--parse-event-list"
+  (should (equal
+	   (org-element-interpret-data (org-sgcal--parse-event-list '((items . [(
+										 (id . "test")
+										 (description . "Hello word")
+										 (start . ((date . "2018-04-01")))
+										 (end . ((date . "2018-04-02")))
+										 (description . "Hello word")
+										 (summary . "hee"))])) 2))
+
+	   "** hee
+DEADLINE: <2018-04-02 一> SCHEDULED: <2018-04-01 日>
+:PROPERTIES:
+:ID:       test
+:END:
+Hello word
+"))
+  (should (equal
+	   (org-element-interpret-data (org-sgcal--parse-event-list '((items . [(
+										 (id . "test")
+										 (description . "Hello word")
+										 (start . ((dateTime . "2018-04-01T14:30:00+0800")))
+										 (end . ((dateTime . "2018-04-02T18:20:00+0800")))
+										 (description . "Hello word")
+										 (summary . "hee"))])) 2))
+
+	   "** hee
+DEADLINE: <2018-04-02 一 18:20> SCHEDULED: <2018-04-01 日 14:30>
+:PROPERTIES:
+:ID:       test
+:END:
+Hello word
+")))
