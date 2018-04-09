@@ -112,15 +112,16 @@ It returns the code provided by the service."
                                  a-token client-secret
                                  &optional eid)
   "post or update event in specify calendar(depends on eid). "
-  (let (data)
+  (let ((data)
+        (stime (if (> (length start) 11) "dateTime" "date")))
     (request
      (concat (org-sgcal--get-events-url cid)
 	     (when eid (concat "/" eid)))
      :sync t
      :type (if eid "PATCH" "POST")
      :headers '(("Content-Type" . "application/json"))
-     :data (json-encode `(("start" ("date" . ,start) ("timeZone" . ,org-sgcal-timezone))
-			  ("end" ("date" ,end) ("timeZone" . ,org-sgcal-timezone))
+     :data (json-encode `(("start" (,stime . ,start) ("timeZone" . ,org-sgcal-timezone))
+			  ("end" (,stime ,end) ("timeZone" . ,org-sgcal-timezone))
 			  ("summary" . ,smry)
 			  ("location" . ,loc)
 			  ("description" . ,desc)))
@@ -211,12 +212,20 @@ contents is org struct text below property drawer
 	(setq s-stamp (org-element-put-property s-stamp :year-start (nth 0 start)))
 	(setq s-stamp (org-element-put-property s-stamp :month-start (nth 1 start)))
 	(setq s-stamp (org-element-put-property s-stamp :day-start (nth 2 start)))
+        (when (= (length start) 5)
+          (setq s-stamp (org-element-put-property s-stamp :hour-start (nth 3 start)))
+          (setq s-stamp (org-element-put-property s-stamp :minute-start (nth 4 start))))
+        
 	(setq e-plan (org-element-put-property e-plan :scheduled s-stamp)))
       (when end
 	(setq e-stamp (org-element-put-property e-stamp :type 'active))
 	(setq e-stamp (org-element-put-property e-stamp :year-start (nth 0 end)))
 	(setq e-stamp (org-element-put-property e-stamp :month-start (nth 1 end)))
 	(setq e-stamp (org-element-put-property e-stamp :day-start (nth 2 end)))
+        (when (= (length start) 5)
+          (setq s-stamp (org-element-put-property e-stamp :hour-start (nth 3 end)))
+          (setq s-stamp (org-element-put-property e-stamp :minute-start (nth 4 end))))
+        
 	(setq e-plan (org-element-put-property e-plan :deadline e-stamp))))
     
     ;; create and set node properties
@@ -238,6 +247,8 @@ contents is org struct text below property drawer
     (setq e-sect (org-element-adopt-elements e-sect e-para))
     (setq e-head (org-element-adopt-elements e-head e-sect))
     e-head))
+
+
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here

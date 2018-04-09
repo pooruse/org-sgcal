@@ -85,7 +85,22 @@ Oh my god!
 :END:
 Oh my god!
 "
-	  )))
+	  ))
+  (should
+   (equal (org-element-interpret-data
+	   (org-sgcal-create-headline '("test" 1 "TODO")
+				      '(("proper1" 1234) ("proper2" "abcde"))
+				      "Oh my god!"
+				      '(2018 4 4 3 40)
+				      '(2018 5 3 4 50)))
+	  "* TODO test
+DEADLINE: <2018-05-03 四 04:50> SCHEDULED: <2018-04-04 三 03:40>
+:PROPERTIES:
+:proper1:  1234
+:proper2:  abcde
+:END:
+Oh my god!
+")))
 
 
 (ert-deftest test-org-sgcal/replace-element ()
