@@ -253,7 +253,8 @@ contents is org struct text below property drawer
         (sumy (cdr (assoc 'summary item)))
         (desc (cdr (assoc 'description item)))
         (start (cdr (assoc 'start item)))
-        (end (cdr (assoc 'end item))))
+        (end (cdr (assoc 'end item)))
+        (updated (cdr (assoc 'updated item))))
     (let ((start-time
            (cond ((assoc 'date start)
                   (parse-time-string (cdr (assoc 'date start))))
@@ -267,7 +268,7 @@ contents is org struct text below property drawer
                   (decode-time (date-to-time (cdr (assoc 'dateTime end)))))
                  (t nil))))
       (org-sgcal-create-headline `(,sumy ,level nil)
-                                 `(("ID" . ,id))
+                                 `(("ID" . ,id) ("UPDATED" . ,updated))
                                  desc
                                  start-time
                                  end-time))))
