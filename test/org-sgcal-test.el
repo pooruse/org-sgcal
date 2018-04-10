@@ -153,6 +153,7 @@ Oh my godness!
 										 (description . "Hello word")
 										 (start . ((date . "2018-04-01")))
 										 (end . ((date . "2018-04-02")))
+                                                                                 (updated . "2018-01-01T01:02:03Z")
 										 (description . "Hello word")
 										 (summary . "hee"))])) 2))
 
@@ -160,6 +161,7 @@ Oh my godness!
 DEADLINE: <2018-04-02 一> SCHEDULED: <2018-04-01 日>
 :PROPERTIES:
 :ID:       test
+:UPDATED:  2018-01-01T01:02:03Z
 :END:
 Hello word
 "))
@@ -169,6 +171,7 @@ Hello word
 										 (description . "Hello word")
 										 (start . ((dateTime . "2018-04-01T14:30:00+0800")))
 										 (end . ((dateTime . "2018-04-02T18:20:00+0800")))
+                                                                                 (updated . "2018-01-01T01:02:03Z")
 										 (description . "Hello word")
 										 (summary . "hee"))])) 2))
 
@@ -176,6 +179,7 @@ Hello word
 DEADLINE: <2018-04-02 一 18:20> SCHEDULED: <2018-04-01 日 14:30>
 :PROPERTIES:
 :ID:       test
+:UPDATED:  2018-01-01T01:02:03Z
 :END:
 Hello word
 ")))
