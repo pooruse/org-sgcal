@@ -42,55 +42,59 @@
 
 (defvar org-sgcal-token-alist nil)
 
+(defun org-sgcal-headline-map (level ele fun &optional argv)
+  "recursive type of org-element-map"
+  (if (= level 0)
+      (apply '#fun argv)
+    (org-element-map ele
+	'headline (lambda (h)
+		    (org-sgcal-headline-map
+		     (1- level) (org-element-contents h) fun (cons h argv)))
+	nil nil 'headline))
+
 ;;; org-sgcal user functions
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
   (let ((ele org-element-parse-buffer))
-    (org-element-map ele 'headline
-      (lambda (h1)
-        (let ((title (org-element-property :title h1))
-              (client-id (org-element-property :CLIENT-ID h1))
-              (client-secret (org-element-property :CLIENT-SECRET h1)))
-          (let (account (assq (intern title) org-sgcal-token-alist))
-            (if account
-                ()
-              (org-sgcal-request-token client))))) nil nil 'headline)
-    )
-  )
+    (org-sgcal-headline-map
+     1 ele (lambda (h1)
+	     (let ((title (org-element-property :title h1))
+		   (client-id (org-element-property :CLIENT-ID h1))
+		   (client-secret (org-element-property :CLIENT-SECRET h1))
+		   (account (assq (intern title) org-sgcal-token-alist)))
+	       (if account
+		   ()
+		 (org-sgcal-request-token client)))))))
 
 (defun org-sgcal-fetch-all ()
-  "Fetch all events according by settings of current buffer "
+  "Fetch all events according by settings of current buffer.
+This function will erase current buffer if success."
   (interactive)
   (let ((ele (org-element-parse-buffer)))
-    (org-element-map ele
-        'headline
-      (lambda (h1)
-        (let ((title (org-element-property :title h1))
-              (client-id (org-element-property :CLIENT-ID h1))
-              (client-secret (org-element-property :CLIENT-SECRET h1)))
-          (let (account (assq (intern title) org-sgcal-token-alist))
-            (if account
-                (let* ((acount-data (cdr account))
-                       (atoken (assq 'acess-token acount-data)))
-                  (org-element-map (org-element-contents h1)
-                      'headline
-                    (lambda (h2)
-                      (let ((cid (org-element-property :CALENDAR-ID))
-                            (max (format-time-string
-                                  org-sgcal-request-time-format
-                                  (time-add (current-time) (days-to-time org-sgcal-up-days))))
-                            (min (format-time-string
-                                  org-sgcal-request-time-format
-                                  (time-add (current-time) (days-to-time org-sgcal-down-days)))))
-                        (org-element-set-contents
-                         h2 (org-sgcal--parse-event-list
-                             (org-sgcal-get-event-list cid client-secret atoken max min) 3)))) nil nil 'headline)
-                  (erase-buffer)
-                  (insert (org-element-interpret-data ele)))
-              (message (concat " Can't find access-token for " title)))))
-        ) nil nil 'headline)))
-
+    (org-sgcal-headline-map
+     2 ele
+     (lambda (h1 h2)
+       (let ((title (org-element-property :title h1))
+	     (client-id (org-element-property :CLIENT-ID h1))
+	     (client-secret (org-element-property :CLIENT-SECRET h1))
+	     (account (assq (intern title) org-sgcal-token-alist)))
+	 (if account
+	     (let* ((acount-data (cdr account))
+		    (atoken (assq 'acess-token acount-data)))
+	       (let ((cid (org-element-property h2 :CALENDAR-ID))
+		     (max (format-time-string
+			   org-sgcal-request-time-format
+			   (time-add (current-time) (days-to-time org-sgcal-up-days))))
+		     (min (format-time-string
+			   org-sgcal-request-time-format
+			   (time-add (current-time) (days-to-time org-sgcal-down-days)))))
+		 (org-element-set-contents
+		  h2 (org-sgcal--parse-event-list
+		      (org-sgcal-get-event-list cid client-secret atoken max min) 3)))
+		      (erase-buffer)
+		      (insert (org-element-interpret-data ele)))
+	   (message (concat " Can't find access-token for " title))))))))
 
 
 ;;; http request functions
