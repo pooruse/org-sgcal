@@ -64,8 +64,13 @@
 		   (client-secret (org-element-property :CLIENT-SECRET h1))
 		   (account (assq (intern title) org-sgcal-token-alist)))
 	       (if account
-		   ()
-		 (org-sgcal-request-token client)))))))
+		   ((let ((rtoken (cdr (assq 'refresh-token account))))
+		      (setq org-sgcal-token-alist
+		       (cons (org-sgcal-refresh-token client-id client-secret rtoken)
+			     org-sgcal-token-alist))))
+		 (setq org-sgcal-token-alist
+		       (cons (org-sgcal-request-token client-id client-secret title)
+			     org-sgcal-token-alist))))))))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
@@ -81,7 +86,7 @@ This function will erase current buffer if success."
 	     (account (assq (intern title) org-sgcal-token-alist)))
 	 (if account
 	     (let* ((acount-data (cdr account))
-		    (atoken (assq 'acess-token acount-data)))
+		    (atoken (assq 'access-token acount-data)))
 	       (let ((cid (org-element-property h2 :CALENDAR-ID))
 		     (max (format-time-string
 			   org-sgcal-request-time-format
@@ -98,7 +103,7 @@ This function will erase current buffer if success."
 
 
 ;;; http request functions
-(defun org-sgcal-request-authorization (client-id)
+(defun org-sgcal-request-authorization (client-id nickname)
   "Request OAuth authorization at AUTH-URL by launching `browse-url'.
 CLIENT-ID is the client id provided by the provider.
 It returns the code provided by the service."
@@ -108,10 +113,10 @@ It returns the code provided by the service."
            "&response_type=code"
            "&redirect_uri=" (url-hexify-string "urn:ietf:wg:oauth:2.0:oob")
            "&scope=" (url-hexify-string org-sgcal-resource-url)))
-  (read-string "Enter the code your browser displayed: "))
+  (read-string (concat "(" nickname ")" "Enter the code on your browser: ")))
 
 
-(defun org-sgcal-request-token (client-id client-secret)
+(defun org-sgcal-request-token (client-id client-secret nickname)
   "Request OAuth access at TOKEN-URL."
   (let (data)
     (request
@@ -120,7 +125,7 @@ It returns the code provided by the service."
      :type "POST"
      :data `(("client_id" . ,client-id)
 	     ("client_secret" . ,client-secret)
-	     ("code" . ,(org-sgcal-request-authorization client-id))
+	     ("code" . ,(org-sgcal-request-authorization client-id nickname))
 	     ("redirect_uri" .  "urn:ietf:wg:oauth:2.0:oob")
 	     ("grant_type" . "authorization_code"))
      :parser 'json-read
