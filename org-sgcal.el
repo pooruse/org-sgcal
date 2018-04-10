@@ -21,25 +21,75 @@
   "https://www.googleapis.com/calendar/v3/calendars/%s/events"
   "URL for event management")
 
+(defconst org-sgcal-request-time-format
+  "%Y-%m-%dT%H:%M:%SZ"
+  "time format for get event list")
+
 (defcustom org-sgcal-timezone "Asia/Taipei"
   "Default timezone for org-sgcal"
   :group 'org-sgcal
   :type 'string) 
 
+(defcustom org-sgcal-up-days 30
+  "Number of days to get events before today."
+  :group 'org-gcal
+  :type 'integer)
+
+(defcustom org-sgcal-down-days 60
+  "Number of days to get events after today."
+  :group 'org-gcal
+  :type 'integer)
+
 (defvar org-sgcal-token-alist nil)
 
 ;;; org-sgcal user functions
+(defun org-sgcal-update-tokens ()
+  "Update tokens by settings of current buffer"
+  (interactive)
+  (let ((ele org-element-parse-buffer))
+    (org-element-map ele 'headline
+      (lambda (h1)
+        (let ((title (org-element-property :title h1))
+              (client-id (org-element-property :CLIENT-ID h1))
+              (client-secret (org-element-property :CLIENT-SECRET h1)))
+          (let (account (assq (intern title) org-sgcal-token-alist))
+            (if account
+                ()
+              (org-sgcal-request-token client))))) nil nil 'headline)
+    )
+  )
+
 (defun org-sgcal-fetch-all ()
+  "Fetch all events according by settings of current buffer "
   (interactive)
   (let ((ele (org-element-parse-buffer)))
     (org-element-map ele
         'headline
-      (lambda (h)
-        (let ((title (org-element-property :title h))
-              (cliend-id (org-element-property :CLIENT-ID h))
-              (clined-secret (org-element-property :CLIENT-SECRET h)))
-          (assq title ))
-        ) nil nil t)))
+      (lambda (h1)
+        (let ((title (org-element-property :title h1))
+              (client-id (org-element-property :CLIENT-ID h1))
+              (client-secret (org-element-property :CLIENT-SECRET h1)))
+          (let (account (assq (intern title) org-sgcal-token-alist))
+            (if account
+                (let* ((acount-data (cdr account))
+                       (atoken (assq 'acess-token acount-data)))
+                  (org-element-map (org-element-contents h1)
+                      'headline
+                    (lambda (h2)
+                      (let ((cid (org-element-property :CALENDAR-ID))
+                            (max (format-time-string
+                                  org-sgcal-request-time-format
+                                  (time-add (current-time) (days-to-time org-sgcal-up-days))))
+                            (min (format-time-string
+                                  org-sgcal-request-time-format
+                                  (time-add (current-time) (days-to-time org-sgcal-down-days)))))
+                        (org-element-set-contents
+                         h2 (org-sgcal--parse-event-list
+                             (org-sgcal-get-event-list cid client-secret atoken max min) 3)))) nil nil 'headline)
+                  (erase-buffer)
+                  (insert (org-element-interpret-data ele)))
+              (message (concat " Can't find access-token for " title)))))
+        ) nil nil 'headline)))
 
 
 
