@@ -26,7 +26,20 @@
   :group 'org-sgcal
   :type 'string) 
 
-(defvar org-sgcal-token-plist nil)
+(defvar org-sgcal-token-alist nil)
+
+;;; org-sgcal user functions
+(defun org-sgcal-fetch-all ()
+  (interactive)
+  (let ((ele (org-element-parse-buffer)))
+    (org-element-map ele
+        'headline
+      (lambda (h)
+        (let ((title (org-element-property :title h))
+              (cliend-id (org-element-property :CLIENT-ID h))
+              (clined-secret (org-element-property :CLIENT-SECRET h)))
+          (assq title ))
+        ) nil nil t)))
 
 
 
@@ -249,23 +262,23 @@ contents is org struct text below property drawer
 
 (defun org-sgcal--parse-item (item)
   "parse json object from google api"
-  (let ((id (cdr (assoc 'id item)))
-        (sumy (cdr (assoc 'summary item)))
-        (desc (cdr (assoc 'description item)))
-        (start (cdr (assoc 'start item)))
-        (end (cdr (assoc 'end item)))
-        (updated (cdr (assoc 'updated item))))
+  (let ((id (cdr (assq 'id item)))
+        (sumy (cdr (assq 'summary item)))
+        (desc (cdr (assq 'description item)))
+        (start (cdr (assq 'start item)))
+        (end (cdr (assq 'end item)))
+        (updated (cdr (assq 'updated item))))
     (let ((start-time
-           (cond ((assoc 'date start)
-                  (parse-time-string (cdr (assoc 'date start))))
-                 ((assoc 'dateTime start)
-                  (decode-time (date-to-time (cdr (assoc 'dateTime start)))))
+           (cond ((assq 'date start)
+                  (parse-time-string (cdr (assq 'date start))))
+                 ((assq 'dateTime start)
+                  (decode-time (date-to-time (cdr (assq 'dateTime start)))))
                  (t nil)))
           (end-time
-           (cond ((assoc 'date end)
-                  (parse-time-string (cdr (assoc 'date end))))
-                 ((assoc 'dateTime end)
-                  (decode-time (date-to-time (cdr (assoc 'dateTime end)))))
+           (cond ((assq 'date end)
+                  (parse-time-string (cdr (assq 'date end))))
+                 ((assq 'dateTime end)
+                  (decode-time (date-to-time (cdr (assq 'dateTime end)))))
                  (t nil))))
       (org-sgcal-create-headline `(,sumy ,level nil)
                                  `(("ID" . ,id) ("UPDATED" . ,updated))
@@ -277,7 +290,7 @@ contents is org struct text below property drawer
   "Parse event list from google api, get event list
 to org element AVL tree
 LEVEL will set to each headline"
-  (let ((items (cdr (assoc 'items response-json))))
+  (let ((items (cdr (assq 'items response-json))))
     (mapcar 'org-sgcal--parse-item items)))
 
 (provide 'org-sgcal)
