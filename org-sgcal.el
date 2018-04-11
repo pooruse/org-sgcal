@@ -85,16 +85,21 @@ This function will erase current buffer if success."
            (if account
                (let* ((acount-data (cdr account))
                       (atoken (cdr(assq 'access_token acount-data))))
-                 (let ((cid (org-element-property :CALENDAR-ID h2))
+                 (let ((name (substring-no-properties (car (org-element-property :title h2))))
+		       (cid (org-element-property :CALENDAR-ID h2))
                        (max (format-time-string
                              org-sgcal-request-time-format
                              (time-add (current-time) (days-to-time org-sgcal-up-days))))
                        (min (format-time-string
                              org-sgcal-request-time-format
-                             (time-subtract (current-time) (days-to-time org-sgcal-down-days)))))
-                   (setq h2 (org-element-set-contents
-			     h2 (org-sgcal--parse-event-list
-				  (org-sgcal-get-event-list cid client-secret atoken min max) 3))))
+                             (time-subtract (current-time) (days-to-time org-sgcal-down-days))))
+		       (new_h2))
+		   (setq new_h2 (org-sgcal-create-headline `(,name 2 nil)))
+                   (setq new_h2 (org-element-set-contents
+			     new_h2 (org-sgcal--parse-event-list
+				     (org-sgcal-get-event-list cid client-secret atoken min max) 3)))
+		   (org-element-extract-element h2)
+		   (setq h1 (org-element-adopt-elements h1 new_h2)))
                  (erase-buffer)
                  (insert (org-element-interpret-data ele))
 		 (org-indent-region (point-min) (point-max)))
