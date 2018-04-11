@@ -189,3 +189,41 @@ DEADLINE: <2018-04-02 一 18:20> SCHEDULED: <2018-04-01 日 14:30>
 :END:
 Hello word
 ")))
+
+(ert-deftest test-org-sgcal/org-sgcal-headline-map ()
+  "test for org-sgcal-headline-map"
+  (should (equal
+           (with-temp-buffer
+             (insert "* RD Team
+  :PROPERTIES:
+  :CLIENT-ID: asdlfkjadkjfhasjkdhfas
+  :CLIENT-SECRET: 12341283461278561
+  :END:
+** sub title
+   :PROPERTIES:
+   :CALENDAR-ID: abcde
+   :END:
+** sub title2
+   :PROPERTIES:
+   :CALENDAR-ID: eeeee
+   :END:")
+             (let ((ele (org-element-parse-buffer)))
+               (org-sgcal-headline-map
+                1 ele (lambda (h1)
+                        (setq h1 (org-element-put-property h1 :title "Biggg"))))
+               (org-element-interpret-data ele)))
+           "* Biggg
+:PROPERTIES:
+:CLIENT-ID: asdlfkjadkjfhasjkdhfas
+:CLIENT-SECRET: 12341283461278561
+:END:
+** sub title
+:PROPERTIES:
+:CALENDAR-ID: abcde
+:END:
+** sub title2
+:PROPERTIES:
+:CALENDAR-ID: eeeee
+:END:
+"))
+  )

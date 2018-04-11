@@ -45,12 +45,12 @@
 (defun org-sgcal-headline-map (level ele fun &optional argv)
   "recursive type of org-element-map"
   (if (= level 0)
-      (apply '#fun argv)
+      (apply fun argv)
     (org-element-map ele
 	'headline (lambda (h)
 		    (org-sgcal-headline-map
 		     (1- level) (org-element-contents h) fun (cons h argv)))
-	nil nil 'headline))
+	nil nil 'headline)))
 
 ;;; org-sgcal user functions
 (defun org-sgcal-update-tokens ()
