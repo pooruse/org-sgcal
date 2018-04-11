@@ -226,4 +226,39 @@ Hello word
 :CALENDAR-ID: eeeee
 :END:
 "))
+  (should (equal
+           (with-temp-buffer
+             (insert "* RD Team
+  :PROPERTIES:
+  :CLIENT-ID: asdlfkjadkjfhasjkdhfas
+  :CLIENT-SECRET: 12341283461278561
+  :END:
+** sub title
+   :PROPERTIES:
+   :CALENDAR-ID: abcde
+   :END:
+** sub title2
+   :PROPERTIES:
+   :CALENDAR-ID: eeeee
+   :END:")
+             (let ((ele (org-element-parse-buffer)))
+               (org-sgcal-headline-map
+                2 ele (lambda (h1 h2)
+                        (setq h1 (org-element-put-property h1 :title "Biggg"))
+                        (setq h2 (org-element-put-property h2 :title "Smalll"))))
+               (org-element-interpret-data ele)))
+           "* Biggg
+:PROPERTIES:
+:CLIENT-ID: asdlfkjadkjfhasjkdhfas
+:CLIENT-SECRET: 12341283461278561
+:END:
+** Smalll
+:PROPERTIES:
+:CALENDAR-ID: abcde
+:END:
+** Smalll
+:PROPERTIES:
+:CALENDAR-ID: eeeee
+:END:
+"))
   )

@@ -45,7 +45,7 @@
 (defun org-sgcal-headline-map (level ele fun &optional argv)
   "recursive type of org-element-map"
   (if (= level 0)
-      (apply fun argv)
+      (apply fun (reverse argv))
     (org-element-map ele
 	'headline (lambda (h)
 		    (org-sgcal-headline-map
@@ -288,7 +288,6 @@ contents is org struct text below property drawer
 	(setq s-stamp (org-element-put-property s-stamp :day-start (nth 3 start)))
         (setq s-stamp (org-element-put-property s-stamp :hour-start (nth 2 start)))
         (setq s-stamp (org-element-put-property s-stamp :minute-start (nth 1 start)))
-        
 	(setq e-plan (org-element-put-property e-plan :scheduled s-stamp)))
       (when end
 	(setq e-stamp (org-element-put-property e-stamp :type 'active))
