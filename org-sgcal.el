@@ -56,21 +56,21 @@
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
-  (let ((ele org-element-parse-buffer))
+  (let ((ele (org-element-parse-buffer)))
     (org-sgcal-headline-map
      1 ele (lambda (h1)
-	     (let ((title (org-element-property :title h1))
-		   (client-id (org-element-property :CLIENT-ID h1))
-		   (client-secret (org-element-property :CLIENT-SECRET h1))
-		   (account (assq (intern title) org-sgcal-token-alist)))
-	       (if account
-		   ((let ((rtoken (cdr (assq 'refresh-token account))))
-		      (setq org-sgcal-token-alist
-		       (cons (org-sgcal-refresh-token client-id client-secret rtoken)
-			     org-sgcal-token-alist))))
-		 (setq org-sgcal-token-alist
-		       (cons (org-sgcal-request-token client-id client-secret title)
-			     org-sgcal-token-alist))))))))
+	     (let ((title (substring-no-properties (car (org-element-property :title h1))))
+		   (client-id (substring-no-properties (org-element-property :CLIENT-ID h1)))
+		   (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
+               (let ((account (assq (intern title) org-sgcal-token-alist)))
+                 (if account
+                     (let ((rtoken (cdr (assq 'refresh-token account))))
+                       (setq org-sgcal-token-alist
+                             (cons (org-sgcal-refresh-token client-id client-secret rtoken)
+                                   org-sgcal-token-alist)))
+                   (setq org-sgcal-token-alist
+                         (cons (org-sgcal-request-token client-id client-secret title)
+                               org-sgcal-token-alist)))))))))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
@@ -80,26 +80,26 @@ This function will erase current buffer if success."
     (org-sgcal-headline-map
      2 ele
      (lambda (h1 h2)
-       (let ((title (org-element-property :title h1))
-	     (client-id (org-element-property :CLIENT-ID h1))
-	     (client-secret (org-element-property :CLIENT-SECRET h1))
-	     (account (assq (intern title) org-sgcal-token-alist)))
-	 (if account
-	     (let* ((acount-data (cdr account))
-		    (atoken (assq 'access-token acount-data)))
-	       (let ((cid (org-element-property h2 :CALENDAR-ID))
-		     (max (format-time-string
-			   org-sgcal-request-time-format
-			   (time-add (current-time) (days-to-time org-sgcal-up-days))))
-		     (min (format-time-string
-			   org-sgcal-request-time-format
-			   (time-add (current-time) (days-to-time org-sgcal-down-days)))))
-		 (org-element-set-contents
-		  h2 (org-sgcal--parse-event-list
-		      (org-sgcal-get-event-list cid client-secret atoken max min) 3)))
-		      (erase-buffer)
-		      (insert (org-element-interpret-data ele)))
-	   (message (concat " Can't find access-token for " title))))))))
+       (let ((title (substring-no-properties (car (org-element-property :title h1))))
+	     (client-id (substring-no-properties (org-element-property :CLIENT-ID h1)))
+	     (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
+         (let ((account (assq (intern title) org-sgcal-token-alist)))
+           (if account
+               (let* ((acount-data (cdr account))
+                      (atoken (assq 'access-token acount-data)))
+                 (let ((cid (substring-no-properties (org-element-property h2 :CALENDAR-ID)))
+                       (max (format-time-string
+                             org-sgcal-request-time-format
+                             (time-add (current-time) (days-to-time org-sgcal-up-days))))
+                       (min (format-time-string
+                             org-sgcal-request-time-format
+                             (time-add (current-time) (days-to-time org-sgcal-down-days)))))
+                   (org-element-set-contents
+                    h2 (org-sgcal--parse-event-list
+                        (org-sgcal-get-event-list cid client-secret atoken max min) 3)))
+                 (erase-buffer)
+                 (insert (org-element-interpret-data ele)))
+             (message (concat " Can't find access-token for " title)))))))))
 
 
 ;;; http request functions
