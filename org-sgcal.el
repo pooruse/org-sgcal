@@ -42,11 +42,11 @@
 
 (defvar org-sgcal-token-alist nil)
 
-(defun org-sgcal-headline-map (level ele fun &optional argv)
+(defun org-sgcal-headline-map (level data fun &optional argv)
   "recursive type of org-element-map"
   (if (= level 0)
       (apply fun (reverse argv))
-    (org-element-map ele
+    (org-element-map data
 	'headline (lambda (h)
 		    (org-sgcal-headline-map
 		     (1- level) (org-element-contents h) fun (cons h argv)))
@@ -64,13 +64,11 @@
 		   (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
                (let ((account (assq (intern title) org-sgcal-token-alist)))
                  (if account
-                     (let ((rtoken (cdr (assq 'refresh-token account))))
-                       (setq org-sgcal-token-alist
-                             (cons (org-sgcal-refresh-token client-id client-secret rtoken)
-                                   org-sgcal-token-alist)))
-                   (setq org-sgcal-token-alist
-                         (cons (org-sgcal-request-token client-id client-secret title)
-                               org-sgcal-token-alist)))))))))
+                     (let ((rtoken (cdr (assq 'refresh_token account))))
+                       (setcdr (assq 'access_token account)
+			       (cdr (assq 'access_token (org-sgcal-refresh-token client-id client-secret rtoken)))))
+                   (add-to-list 'org-sgcal-token-alist
+				`(,(intern title) . ,(org-sgcal-request-token client-id client-secret title))))))))))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
@@ -81,24 +79,25 @@ This function will erase current buffer if success."
      2 ele
      (lambda (h1 h2)
        (let ((title (substring-no-properties (car (org-element-property :title h1))))
-	     (client-id (substring-no-properties (org-element-property :CLIENT-ID h1)))
-	     (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
+	     (client-id (org-element-property :CLIENT-ID h1))
+	     (client-secret (org-element-property :CLIENT-SECRET h1)))
          (let ((account (assq (intern title) org-sgcal-token-alist)))
            (if account
                (let* ((acount-data (cdr account))
-                      (atoken (assq 'access-token acount-data)))
-                 (let ((cid (substring-no-properties (org-element-property h2 :CALENDAR-ID)))
+                      (atoken (cdr(assq 'access_token acount-data))))
+                 (let ((cid (org-element-property :CALENDAR-ID h2))
                        (max (format-time-string
                              org-sgcal-request-time-format
                              (time-add (current-time) (days-to-time org-sgcal-up-days))))
                        (min (format-time-string
                              org-sgcal-request-time-format
-                             (time-add (current-time) (days-to-time org-sgcal-down-days)))))
-                   (org-element-set-contents
-                    h2 (org-sgcal--parse-event-list
-                        (org-sgcal-get-event-list cid client-secret atoken max min) 3)))
+                             (time-subtract (current-time) (days-to-time org-sgcal-down-days)))))
+                   (setq h2 (org-element-set-contents
+			     h2 (org-sgcal--parse-event-list
+				  (org-sgcal-get-event-list cid client-secret atoken min max) 3))))
                  (erase-buffer)
-                 (insert (org-element-interpret-data ele)))
+                 (insert (org-element-interpret-data ele))
+		 (org-indent-region (point-min) (point-max)))
              (message (concat " Can't find access-token for " title)))))))))
 
 
