@@ -85,7 +85,7 @@ This function will erase current buffer if success."
            (if account
                (let* ((acount-data (cdr account))
                       (atoken (cdr(assq 'access_token acount-data))))
-                 (let ((name (substring-no-properties (car (org-element-property :title h2))))
+                 (let ((name (car (org-element-property :title h2)))
 		       (cid (org-element-property :CALENDAR-ID h2))
                        (max (format-time-string
                              org-sgcal-request-time-format
@@ -132,7 +132,7 @@ It returns the code provided by the service."
 	     ("code" . ,(org-sgcal-request-authorization client-id nickname))
 	     ("redirect_uri" .  "urn:ietf:wg:oauth:2.0:oob")
 	     ("grant_type" . "authorization_code"))
-     :parser 'json-read
+     :parser 'org-sgcal--json-read
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
 		 (setq data (request-response-data response))))
@@ -152,7 +152,7 @@ It returns the code provided by the service."
 	     ("client_secret" . ,client-secret)
 	     ("refresh_token" . ,refresh-token)
 	     ("grant_type" . "refresh_token"))
-     :parser 'json-read
+     :parser 'org-sgcal--json-read
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
 		 (setq data (request-response-data response))))
@@ -175,7 +175,7 @@ It returns the code provided by the service."
 	       ("timeMin" . ,min)
 	       ("timeMax" . ,max)
 	       ("grant_type" . "authorization_code"))
-     :parser 'json-read
+     :parser 'org-sgcal--json-read
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
 		 (setq data (request-response-data response))))
@@ -205,7 +205,7 @@ It returns the code provided by the service."
 	       ("key" . ,client-secret)
 	       ("grant_type" . "authorization_code"))
 
-     :parser 'json-read
+     :parser 'org-sgcal--json-read
      :error (cl-function
 	     (lambda (&key error-thrown &allow-other-keys)
 	       (message (format "Get error: %s" error-thrown))))
@@ -354,6 +354,11 @@ to org element AVL tree
 LEVEL will set to each headline"
   (let ((items (cdr (assq 'items response-json))))
     (mapcar 'org-sgcal--parse-item items)))
+
+(defun org-sgcal--json-read ()
+  (json-read-from-string
+   (decode-coding-string
+    (buffer-substring-no-properties (point-min) (point-max)) 'utf-8)))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
