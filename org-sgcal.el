@@ -336,13 +336,17 @@ contents is org struct text below property drawer
            (cond ((assq 'date start)
                   (parse-time-string (cdr (assq 'date start))))
                  ((assq 'dateTime start)
-                  (decode-time (date-to-time (cdr (assq 'dateTime start)))))
+                  (decode-time (date-to-time
+				(org-sgcal--convert-time-string
+				 (cdr (assq 'dateTime start))))))
                  (t nil)))
           (end-time
            (cond ((assq 'date end)
                   (parse-time-string (cdr (assq 'date end))))
                  ((assq 'dateTime end)
-                  (decode-time (date-to-time (cdr (assq 'dateTime end)))))
+                  (decode-time (date-to-time
+				(org-sgcal--convert-time-string
+				 (cdr (assq 'dateTime end))))))
                  (t nil))))
       (org-sgcal-create-headline `(,sumy ,level nil)
                                  `(("ID" . ,id) ("UPDATED" . ,updated))
@@ -361,6 +365,15 @@ LEVEL will set to each headline"
   (json-read-from-string
    (decode-coding-string
     (buffer-substring-no-properties (point-min) (point-max)) 'utf-8)))
+
+(defun org-sgcal--convert-time-string (str)
+  "This function will convert wikipedia ISO-8601
+String to format that `data-to-time' can accept"
+  (let ((case1 (string-match "+" str)))
+    (cond (case1
+	   (concat (substring str 0 case1)
+		   (replace-regexp-in-string ":" "" str nil nil nil 19)))
+	  (t str))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
