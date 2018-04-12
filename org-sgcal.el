@@ -93,13 +93,15 @@ This function will erase current buffer if success."
                        (min (format-time-string
                              org-sgcal-request-time-format
                              (time-subtract (current-time) (days-to-time org-sgcal-down-days))))
-		       (new_h2))
-		   (setq new_h2 (org-sgcal-create-headline `(,name 2 nil)))
-                   (setq new_h2 (org-element-set-contents
-			     new_h2 (org-sgcal--parse-event-list
-				     (org-sgcal-get-event-list cid client-secret atoken min max) 3)))
-		   (org-element-extract-element h2)
-		   (setq h1 (org-element-adopt-elements h1 new_h2)))
+                       (new_h2))
+                   (setq new_h2 (org-sgcal-create-headline `(,name 2 nil)
+                                                           `(("CALENDAR-ID" . ,cid))))
+		   (setq new_h2 (apply #'org-element-adopt-elements
+                                 new_h2 (org-sgcal--parse-event-list
+                                         (org-sgcal-get-event-list cid client-secret atoken min max) 3)))
+                   
+                   (org-element-extract-element h2)
+                   (setq h1 (org-element-adopt-elements h1 new_h2)))
                  (erase-buffer)
                  (insert (org-element-interpret-data ele))
 		 (org-indent-region (point-min) (point-max)))
