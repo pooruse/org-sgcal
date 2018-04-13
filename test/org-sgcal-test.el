@@ -10,6 +10,20 @@
     (newline)
     (insert (format "%s" (pp ele)))))
 
+(defun convert-time-to-org-string (date-time)
+  "date-time is a list which format is the same
+as `decode-time' return"
+  (if (nth 2 date-time)
+      (format-time-string
+       (cdr org-time-stamp-formats)
+       (apply #'encode-time
+              date-time))
+    (progn
+      (setcar (nthcdr 2 date-time) 0)
+      (format-time-string
+       (car org-time-stamp-formats)
+       (apply #'encode-time
+              date-time)))))
 
 (ert-deftest test-org-sgcal/create-headline ()
   "test org-sgcal--create-headline can 
@@ -21,52 +35,52 @@ create correct org string"
 				      "Oh my god!"
 				      '(nil nil nil 4 4 2018)
 				      '(nil nil nil 3 5 2018)))
-	  (concat"* TODO test\n"
-                 "DEADLINE: " (format-time-string
-                               (car org-time-stamp-formats)
-                               (apply #'encode-time
-                                      (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
-                 " SCHEDULED: " (format-time-string
-                                 (car org-time-stamp-formats)
-                                 (apply #'encode-time
-                                        (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
-                 "\n"
-                 ":PROPERTIES:\n"
-                 ":proper1:  1234\n"
-                 ":proper2:  abcde\n"
-                 ":END:\n"
-                 "Oh my god!\n")))
-  (should
-     (equal (org-element-interpret-data
-	     (org-sgcal--create-headline '("test" 1 "TODO")
-					nil
-					"Oh my god!"
-					'(nil nil nil 4 4 2018)
-					'(nil nil nil 3 5 2018)))
-	    (concat "* TODO test\n"
-                    "DEADLINE: " (format-time-string
+	  (concat "* TODO test\n"
+                  "DEADLINE: " (format-time-string
+                                (car org-time-stamp-formats)
+                                (apply #'encode-time
+                                       (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                  " SCHEDULED: " (format-time-string
                                   (car org-time-stamp-formats)
                                   (apply #'encode-time
-                                         (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
-                    " SCHEDULED: " (format-time-string
-                                    (car org-time-stamp-formats)
-                                    (apply #'encode-time
-                                           (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
-                    "\n"
-                    "Oh my god!\n")))
+                                         (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
+                  "\n"
+                  ":PROPERTIES:\n"
+                  ":proper1:  1234\n"
+                  ":proper2:  abcde\n"
+                  ":END:\n"
+                  "Oh my god!\n")))
+  (should
+   (equal (org-element-interpret-data
+           (org-sgcal--create-headline '("test" 1 "TODO")
+                                       nil
+                                       "Oh my god!"
+                                       '(nil nil nil 4 4 2018)
+                                       '(nil nil nil 3 5 2018)))
+          (concat "* TODO test\n"
+                  "DEADLINE: " (format-time-string
+                                (car org-time-stamp-formats)
+                                (apply #'encode-time
+                                       (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                  " SCHEDULED: " (format-time-string
+                                  (car org-time-stamp-formats)
+                                  (apply #'encode-time
+                                         (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
+                  "\n"
+                  "Oh my god!\n")))
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal--create-headline '("test" 1 "TODO")
-				      '(("proper1" . 1234) ("proper2" . "abcde"))
-				      "Oh my god!"
-				      nil
-				      '(nil nil nil 3 5 2018)))
+                                       '(("proper1" . 1234) ("proper2" . "abcde"))
+                                       "Oh my god!"
+                                       nil
+                                       '(nil nil nil 3 5 2018)))
 	  (concat "* TODO test\n"
                   "DEADLINE: "
                   (format-time-string
-                                  (car org-time-stamp-formats)
-                                  (apply #'encode-time
-                                         (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                   (car org-time-stamp-formats)
+                   (apply #'encode-time
+                          (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
                   "\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
@@ -76,10 +90,10 @@ create correct org string"
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal--create-headline '("test" 1 "TODO")
-				      '(("proper1" . 1234) ("proper2" . "abcde"))
-				      "Oh my god!"
-				      nil
-				      nil))
+                                       '(("proper1" . 1234) ("proper2" . "abcde"))
+                                       "Oh my god!"
+                                       nil
+                                       nil))
 	  (concat "* TODO test\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
@@ -89,10 +103,10 @@ create correct org string"
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal--create-headline '("test" 1 nil)
-				      '(("proper1" . 1234) ("proper2" . "abcde"))
-				      "Oh my god!"
-				      nil
-				      nil))
+                                       '(("proper1" . 1234) ("proper2" . "abcde"))
+                                       "Oh my god!"
+                                       nil
+                                       nil))
 	  (concat "* test\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
@@ -102,10 +116,10 @@ create correct org string"
   (should
    (equal (org-element-interpret-data
 	   (org-sgcal--create-headline '("test" 1 "TODO")
-				      '(("proper1" . 1234) ("proper2" . "abcde"))
-				      "Oh my god!"
-				      '(nil 40 3 4 4 2018)
-				      '(nil 50 4 3 5 2018)))
+                                       '(("proper1" . 1234) ("proper2" . "abcde"))
+                                       "Oh my god!"
+                                       '(nil 40 3 4 4 2018)
+                                       '(nil 50 4 3 5 2018)))
 	  (concat "* TODO test\n"
                   "DEADLINE: "
                   "<2018-05-03 四 04:50>"
@@ -147,7 +161,7 @@ replace headline currectly"
 	     h (org-sgcal--create-headline '("test" 1 "DONE")))
 	    t) nil t) )
       (buffer-string))
-
+    
     (concat "* DONE test\n"
             "* DONE test3\n"
             "DEADLINE: <2018-07-03 四> SCHEDULED: <2018-04-04 三>\n"
@@ -156,7 +170,7 @@ replace headline currectly"
             ":proper2:  bbb\n"
             ":END:\n"
             "Oh my godness!\n"))))
- 
+
 (ert-deftest test-org-sgcal/parse-event-list ()
   
   "Test for org-sgcal--parse-event-list"
@@ -169,7 +183,7 @@ replace headline currectly"
                                                                                  (updated . "2018-01-01T01:02:03Z")
 										 (description . "Hello word")
 										 (summary . "hee"))])) 2))
-
+           
 	   (concat "** hee\n"
                    "DEADLINE: <2018-04-02 一> SCHEDULED: <2018-04-01 日>\n"
                    ":PROPERTIES:\n"
@@ -211,14 +225,15 @@ replace headline currectly"
                              "** sub title2\n"
                              "   :PROPERTIES:\n"
                              "   :CALENDAR-ID: eeeee\n"
-                             "   :END:"))
+                             "   :END:\n"))
              (let ((ele (org-element-parse-buffer)))
                (org-sgcal--headline-map
                 1 ele (lambda (h1)
                         (setq h1 (org-element-put-property h1 :title "Biggg"))))
                (org-element-interpret-data ele)))
            (concat "* Biggg\n"
-                   ":PROPERTIES:\n" ":CLIENT-ID: asdlfkjadkjfhasjkdhfas"
+                   ":PROPERTIES:\n"
+                   ":CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
                    ":CLIENT-SECRET: 12341283461278561\n"
                    ":END:\n"
                    "** sub title\n"
@@ -231,7 +246,7 @@ replace headline currectly"
                    ":END:\n")))
   (should (equal
            (with-temp-buffer
-             (insert "* RD Team\n  \n"
+             (insert "* RD Team\n"
                      ":PROPERTIES:\n"
                      "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
                      "  :CLIENT-SECRET: 12341283461278561\n"
@@ -243,26 +258,27 @@ replace headline currectly"
                      "** sub title2\n"
                      "   :PROPERTIES:\n"
                      "   :CALENDAR-ID: eeeee\n"
-                     "   :END:")
+                     "   :END:\n")
              (let ((ele (org-element-parse-buffer)))
                (org-sgcal--headline-map
                 2 ele (lambda (h1 h2)
                         (setq h1 (org-element-put-property h1 :title "Biggg"))
                         (setq h2 (org-element-put-property h2 :title "Smalll"))))
                (org-element-interpret-data ele)))
-           "* Biggg\n"
-           ":PROPERTIES:\n"
-           ":CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
-           ":CLIENT-SECRET: 12341283461278561\n"
-           ":END:\n"
-           "** Smalll\n"
-           ":PROPERTIES:\n"
-           ":CALENDAR-ID: abcde\n"
-           ":END:\n"
-           "** Smalll\n"
-           ":PROPERTIES:\n"
-           ":CALENDAR-ID: eeeee\n"
-           ":END:\n")))
+           (concat
+            "* Biggg\n"
+            ":PROPERTIES:\n"
+            ":CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+            ":CLIENT-SECRET: 12341283461278561\n"
+            ":END:\n"
+            "** Smalll\n"
+            ":PROPERTIES:\n"
+            ":CALENDAR-ID: abcde\n"
+            ":END:\n"
+            "** Smalll\n"
+            ":PROPERTIES:\n"
+            ":CALENDAR-ID: eeeee\n"
+            ":END:\n"))))
 
 (ert-deftest test-org-sgcal/convert-time-string ()
   "test for org-sgcal--convert-time-string"
