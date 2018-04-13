@@ -256,3 +256,11 @@ Hello word
 :END:
 "))
   )
+
+(ert-deftest test-org-sgcal/convert-time-string ()
+  "test for org-sgcal--convert-time-string"
+
+  (should (equal (org-sgcal--convert-time-string "2018-04-01T17:00:00+08:00")
+                 "2018-04-01T17:00:00+0800"))
+  (should (equal (org-sgcal--convert-time-string "2018-04-01T17:00:00Z")
+                 "2018-04-01T17:00:00Z")))
