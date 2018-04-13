@@ -42,40 +42,20 @@
 
 (defvar org-sgcal-token-alist nil)
 
-(defun org-sgcal-headline-map (level data fun &optional argv)
-  "recursive type of org-element-map"
-  (if (= level 0)
-      (apply fun (reverse argv))
-    (org-element-map data
-	'headline (lambda (h)
-		    (org-sgcal-headline-map
-		     (1- level) (org-element-contents h) fun (cons h argv)))
-	nil nil 'headline)))
+
 
 ;;; org-sgcal user functions
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
-  (let ((ele (org-element-parse-buffer)))
-    (org-sgcal-headline-map
-     1 ele (lambda (h1)
-	     (let ((title (substring-no-properties (car (org-element-property :title h1))))
-		   (client-id (substring-no-properties (org-element-property :CLIENT-ID h1)))
-		   (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
-               (let ((account (assq (intern title) org-sgcal-token-alist)))
-                 (if account
-                     (let ((rtoken (cdr (assq 'refresh_token account))))
-                       (setcdr (assq 'access_token account)
-			       (cdr (assq 'access_token (org-sgcal-refresh-token client-id client-secret rtoken)))))
-                   (add-to-list 'org-sgcal-token-alist
-				`(,(intern title) . ,(org-sgcal-request-token client-id client-secret title))))))))))
+  (org-sgcal--update-token-alist #'org-sgcal-request-token #'org-sgcal-refresh-token))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
 This function will erase current buffer if success."
   (interactive)
   (let ((ele (org-element-parse-buffer)))
-    (org-sgcal-headline-map
+    (org-sgcal--headline-map
      2 ele
      (lambda (h1 h2)
        (let ((title (substring-no-properties (car (org-element-property :title h1))))
@@ -94,7 +74,7 @@ This function will erase current buffer if success."
                              org-sgcal-request-time-format
                              (time-subtract (current-time) (days-to-time org-sgcal-down-days))))
                        (new_h2))
-                   (setq new_h2 (org-sgcal-create-headline `(,name 2 nil)
+                   (setq new_h2 (org-sgcal--create-headline `(,name 2 nil)
                                                            `(("CALENDAR-ID" . ,cid))))
 		   (setq new_h2 (apply #'org-element-adopt-elements
                                  new_h2 (org-sgcal--parse-event-list
@@ -236,14 +216,14 @@ It returns the code provided by the service."
     out))
 
 
-;;; internal functions
+;;; internal functions (testable)
 (defun org-sgcal--get-events-url (cid)
   "Internal function, return calendar url by calendar id"
   (format org-sgcal-events-url cid))
 
 
 ;;; org-scgcal tools
-(defun org-sgcal-replace-element (ele-A ele-B)
+(defun org-sgcal--replace-element (ele-A ele-B)
   "replace ele-A to ele-B in current buffer
 ele-A must be a element exists in current buffer"
   (let ((beg-A (org-element-property :begin ele-A))
@@ -253,7 +233,7 @@ ele-A must be a element exists in current buffer"
     (delete-region beg-A end-A)
     (insert body-B)))
 
-(defun org-sgcal-create-headline (head &optional properties contents start end)
+(defun org-sgcal--create-headline (head &optional properties contents start end)
   "head is a list which contains (title level todo-keyword)
 
 property is a list of pair which contains key and value,
@@ -324,6 +304,16 @@ contents is org struct text below property drawer
     (setq e-head (org-element-adopt-elements e-head e-sect))
     e-head))
 
+(defun org-sgcal--headline-map (level data fun &optional argv)
+  "recursive type of org-element-map"
+  (if (= level 0)
+      (apply fun (reverse argv))
+    (org-element-map data
+	'headline (lambda (h)
+		    (org-sgcal--headline-map
+		     (1- level) (org-element-contents h) fun (cons h argv)))
+	nil nil 'headline)))
+
 (defun org-sgcal--parse-item (item)
   "parse json object from google api"
   (let ((id (cdr (assq 'id item)))
@@ -348,7 +338,7 @@ contents is org struct text below property drawer
 				(org-sgcal--convert-time-string
 				 (cdr (assq 'dateTime end))))))
                  (t nil))))
-      (org-sgcal-create-headline `(,sumy ,level nil)
+      (org-sgcal--create-headline `(,sumy ,level nil)
                                  `(("ID" . ,id) ("UPDATED" . ,updated))
                                  desc
                                  start-time
@@ -374,6 +364,22 @@ String to format that `data-to-time' can accept"
 	   (concat (substring str 0 case1)
 		   (replace-regexp-in-string ":" "" str nil nil nil 19)))
 	  (t str))))
+
+(defun org-sgcal--update-token-alist (request-fun refresh-fun)
+  "Update tokens by settings of current buffer"
+  (let ((ele (org-element-parse-buffer)))
+    (org-sgcal--headline-map
+     1 ele (lambda (h1)
+	     (let ((title (substring-no-properties (car (org-element-property :title h1))))
+		   (client-id (substring-no-properties (org-element-property :CLIENT-ID h1)))
+		   (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
+               (let ((account (assq (intern title) org-sgcal-token-alist)))
+                 (if account
+                     (let ((rtoken (cdr (assq 'refresh_token account))))
+                       (setcdr (assq 'access_token account)
+			       (cdr (assq 'access_token (funcall #'refresh-fun client-id client-secret rtoken)))))
+                   (add-to-list 'org-sgcal-token-alist
+				`(,(intern title) . ,(funcall #'request-fun client-id client-secret title))))))))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here

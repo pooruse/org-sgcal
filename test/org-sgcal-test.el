@@ -12,11 +12,11 @@
 
 
 (ert-deftest test-org-sgcal/create-headline ()
-  "test org-sgcal-create-headline can 
+  "test org-sgcal--create-headline can 
 create correct org string"
   (should
    (equal (org-element-interpret-data
-	   (org-sgcal-create-headline '("test" 1 "TODO")
+	   (org-sgcal--create-headline '("test" 1 "TODO")
 				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      '(nil nil nil 4 4 2018)
@@ -31,7 +31,7 @@ Oh my god!
 "))
   (should
      (equal (org-element-interpret-data
-	     (org-sgcal-create-headline '("test" 1 "TODO")
+	     (org-sgcal--create-headline '("test" 1 "TODO")
 					nil
 					"Oh my god!"
 					'(nil nil nil 4 4 2018)
@@ -43,7 +43,7 @@ Oh my god!
 	    ))
   (should
    (equal (org-element-interpret-data
-	   (org-sgcal-create-headline '("test" 1 "TODO")
+	   (org-sgcal--create-headline '("test" 1 "TODO")
 				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      nil
@@ -59,7 +59,7 @@ Oh my god!
 	  ))
   (should
    (equal (org-element-interpret-data
-	   (org-sgcal-create-headline '("test" 1 "TODO")
+	   (org-sgcal--create-headline '("test" 1 "TODO")
 				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      nil
@@ -73,7 +73,7 @@ Oh my god!
 "))
   (should
    (equal (org-element-interpret-data
-	   (org-sgcal-create-headline '("test" 1 nil)
+	   (org-sgcal--create-headline '("test" 1 nil)
 				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      nil
@@ -88,7 +88,7 @@ Oh my god!
 	  ))
   (should
    (equal (org-element-interpret-data
-	   (org-sgcal-create-headline '("test" 1 "TODO")
+	   (org-sgcal--create-headline '("test" 1 "TODO")
 				      '(("proper1" . 1234) ("proper2" . "abcde"))
 				      "Oh my god!"
 				      '(nil 40 3 4 4 2018)
@@ -129,8 +129,8 @@ Oh my godness!
 	(org-element-map ele
 	    'headline
 	  (lambda (h) 
-	    (org-sgcal-replace-element
-	     h (org-sgcal-create-headline '("test" 1 "DONE")))
+	    (org-sgcal--replace-element
+	     h (org-sgcal--create-headline '("test" 1 "DONE")))
 	    t) nil t) )
       (buffer-string))
 
@@ -184,8 +184,8 @@ DEADLINE: <2018-04-02 一 18:20> SCHEDULED: <2018-04-01 日 14:30>
 Hello word
 ")))
 
-(ert-deftest test-org-sgcal/org-sgcal-headline-map ()
-  "test for org-sgcal-headline-map"
+(ert-deftest test-org-sgcal/headline-map ()
+  "test for `org-sgcal--headline-map'"
   (should (equal
            (with-temp-buffer
              (insert "* RD Team
@@ -202,7 +202,7 @@ Hello word
    :CALENDAR-ID: eeeee
    :END:")
              (let ((ele (org-element-parse-buffer)))
-               (org-sgcal-headline-map
+               (org-sgcal--headline-map
                 1 ele (lambda (h1)
                         (setq h1 (org-element-put-property h1 :title "Biggg"))))
                (org-element-interpret-data ele)))
@@ -236,7 +236,7 @@ Hello word
    :CALENDAR-ID: eeeee
    :END:")
              (let ((ele (org-element-parse-buffer)))
-               (org-sgcal-headline-map
+               (org-sgcal--headline-map
                 2 ele (lambda (h1 h2)
                         (setq h1 (org-element-put-property h1 :title "Biggg"))
                         (setq h2 (org-element-put-property h2 :title "Smalll"))))
