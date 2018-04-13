@@ -22,7 +22,15 @@ create correct org string"
 				      '(nil nil nil 4 4 2018)
 				      '(nil nil nil 3 5 2018)))
 	  (concat"* TODO test\n"
-                 "DEADLINE: <2018-05-03 四> SCHEDULED: <2018-04-04 三>\n"
+                 "DEADLINE: " (format-time-string
+                               (car org-time-stamp-formats)
+                               (apply #'encode-time
+                                      (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                 " SCHEDULED: " (format-time-string
+                                 (car org-time-stamp-formats)
+                                 (apply #'encode-time
+                                        (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
+                 "\n"
                  ":PROPERTIES:\n"
                  ":proper1:  1234\n"
                  ":proper2:  abcde\n"
@@ -36,7 +44,15 @@ create correct org string"
 					'(nil nil nil 4 4 2018)
 					'(nil nil nil 3 5 2018)))
 	    (concat "* TODO test\n"
-                    "DEADLINE: <2018-05-03 四> SCHEDULED: <2018-04-04 三>\n"
+                    "DEADLINE: " (format-time-string
+                                  (car org-time-stamp-formats)
+                                  (apply #'encode-time
+                                         (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                    " SCHEDULED: " (format-time-string
+                                    (car org-time-stamp-formats)
+                                    (apply #'encode-time
+                                           (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
+                    "\n"
                     "Oh my god!\n")))
   (should
    (equal (org-element-interpret-data
@@ -46,7 +62,12 @@ create correct org string"
 				      nil
 				      '(nil nil nil 3 5 2018)))
 	  (concat "* TODO test\n"
-                  "DEADLINE: <2018-05-03 四>\n"
+                  "DEADLINE: "
+                  (format-time-string
+                                  (car org-time-stamp-formats)
+                                  (apply #'encode-time
+                                         (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                  "\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
                   ":proper2:  abcde\n"
@@ -86,7 +107,11 @@ create correct org string"
 				      '(nil 40 3 4 4 2018)
 				      '(nil 50 4 3 5 2018)))
 	  (concat "* TODO test\n"
-                  "DEADLINE: <2018-05-03 四 04:50> SCHEDULED: <2018-04-04 三 03:40>\n"
+                  "DEADLINE: "
+                  "<2018-05-03 四 04:50>"
+                  " SCHEDULED: "
+                  "<2018-04-04 三 03:40>"
+                  "\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
                   ":proper2:  abcde\n"
