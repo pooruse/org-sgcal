@@ -36,14 +36,8 @@ create correct org string"
 				      '(nil nil nil 4 4 2018)
 				      '(nil nil nil 3 5 2018)))
 	  (concat "* TODO test\n"
-                  "DEADLINE: " (format-time-string
-                                (car org-time-stamp-formats)
-                                (apply #'encode-time
-                                       (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
-                  " SCHEDULED: " (format-time-string
-                                  (car org-time-stamp-formats)
-                                  (apply #'encode-time
-                                         (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
+                  "DEADLINE: " (convert-time-to-org-string '(0 0 nil 3 5 2018 nil)) 
+                  " SCHEDULED: " (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
                   "\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
@@ -58,14 +52,8 @@ create correct org string"
                                        '(nil nil nil 4 4 2018)
                                        '(nil nil nil 3 5 2018)))
           (concat "* TODO test\n"
-                  "DEADLINE: " (format-time-string
-                                (car org-time-stamp-formats)
-                                (apply #'encode-time
-                                       (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
-                  " SCHEDULED: " (format-time-string
-                                  (car org-time-stamp-formats)
-                                  (apply #'encode-time
-                                         (decode-time (date-to-time "2018-04-04T00:00:00Z"))))
+                  "DEADLINE: " (convert-time-to-org-string '(0 0 nil 3 5 2018 nil)) 
+                  " SCHEDULED: " (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
                   "\n"
                   "Oh my god!\n")))
   (should
@@ -77,10 +65,7 @@ create correct org string"
                                        '(nil nil nil 3 5 2018)))
 	  (concat "* TODO test\n"
                   "DEADLINE: "
-                  (format-time-string
-                   (car org-time-stamp-formats)
-                   (apply #'encode-time
-                          (decode-time (date-to-time "2018-05-03T00:00:00Z"))))
+                  (convert-time-to-org-string '(0 0 nil 3 5 2018 nil)) 
                   "\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
@@ -122,9 +107,9 @@ create correct org string"
                                        '(nil 50 4 3 5 2018)))
 	  (concat "* TODO test\n"
                   "DEADLINE: "
-                  "<2018-05-03 四 04:50>"
+                  (convert-time-to-org-string '(0 50 4 3 5 2018 nil)) 
                   " SCHEDULED: "
-                  "<2018-04-04 三 03:40>"
+                  (convert-time-to-org-string '(0 40 3 4 4 2018 nil)) 
                   "\n"
                   ":PROPERTIES:\n"
                   ":proper1:  1234\n"
@@ -140,14 +125,22 @@ replace headline currectly"
    (equal
     (with-temp-buffer
       (insert (concat "* TODO test\n"
-                      "DEADLINE: <2018-05-03 四> SCHEDULED: <2018-04-04 三>\n"
+                      "DEADLINE: "
+                      (convert-time-to-org-string '(0 0 nil 3 5 2018 nil)) 
+                      " SCHEDULED: "
+                      (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
+                      "\n"
                       ":PROPERTIES:\n"
                       ":proper1:  1234\n"
                       ":proper2:  abcde\n"
                       ":END:\n"
                       "Oh my god!\n"
                       "* DONE test3\n"
-                      "DEADLINE: <2018-07-03 四> SCHEDULED: <2018-04-04 三>\n"
+                      "DEADLINE: "
+                      (convert-time-to-org-string '(0 0 nil 3 7 2018 nil)) 
+                      " SCHEDULED: "
+                      (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
+                      "\n"
                       ":PROPERTIES:\n"
                       ":proper1:  weqre\n"
                       ":proper2:  bbb\n"
@@ -164,7 +157,11 @@ replace headline currectly"
     
     (concat "* DONE test\n"
             "* DONE test3\n"
-            "DEADLINE: <2018-07-03 四> SCHEDULED: <2018-04-04 三>\n"
+            "DEADLINE: "
+            (convert-time-to-org-string '(0 0 nil 3 7 2018 nil)) 
+            " SCHEDULED: "
+            (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
+            "\n"
             ":PROPERTIES:\n"
             ":proper1:  weqre\n"
             ":proper2:  bbb\n"
@@ -185,7 +182,11 @@ replace headline currectly"
 										 (summary . "hee"))])) 2))
            
 	   (concat "** hee\n"
-                   "DEADLINE: <2018-04-02 一> SCHEDULED: <2018-04-01 日>\n"
+                   "DEADLINE: "
+                   (convert-time-to-org-string '(0 0 nil 2 4 2018 nil)) 
+                   " SCHEDULED: "
+                   (convert-time-to-org-string '(0 0 nil 1 4 2018 nil)) 
+                   "\n"
                    ":PROPERTIES:\n"
                    ":ID:       test\n"
                    ":UPDATED:  2018-01-01T01:02:03Z\n"
@@ -202,7 +203,11 @@ replace headline currectly"
 										 (summary . "hee"))])) 2))
 
 	   (concat "** hee\n"
-                   "DEADLINE: <2018-04-02 一 18:20> SCHEDULED: <2018-04-01 日 14:30>\n"
+                   "DEADLINE: "
+                   (convert-time-to-org-string '(0 20 18 2 4 2018 nil)) 
+                   " SCHEDULED: "
+                   (convert-time-to-org-string '(0 30 14 1 4 2018 nil)) 
+                   "\n"
                    ":PROPERTIES:\n"
                    ":ID:       test\n"
                    ":UPDATED:  2018-01-01T01:02:03Z\n"
@@ -282,7 +287,6 @@ replace headline currectly"
 
 (ert-deftest test-org-sgcal/convert-time-string ()
   "test for org-sgcal--convert-time-string"
-
   (should (equal (org-sgcal--convert-time-string "2018-04-01T17:00:00+08:00")
                  "2018-04-01T17:00:00+0800"))
   (should (equal (org-sgcal--convert-time-string "2018-04-01T17:00:00Z")
