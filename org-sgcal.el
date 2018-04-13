@@ -48,44 +48,17 @@
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
-  (org-sgcal--update-token-alist #'org-sgcal-request-token #'org-sgcal-refresh-token))
+  (org-sgcal--update-token-alist (lambda (&rest argv)
+                                   (apply #'org-sgcal-request-token argv))
+                                 (lambda (&rest argv)
+                                   (apply $'org-sgcal-refresh-token argv))))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
 This function will erase current buffer if success."
   (interactive)
-  (let ((ele (org-element-parse-buffer)))
-    (org-sgcal--headline-map
-     2 ele
-     (lambda (h1 h2)
-       (let ((title (substring-no-properties (car (org-element-property :title h1))))
-	     (client-id (org-element-property :CLIENT-ID h1))
-	     (client-secret (org-element-property :CLIENT-SECRET h1)))
-         (let ((account (assq (intern title) org-sgcal-token-alist)))
-           (if account
-               (let* ((acount-data (cdr account))
-                      (atoken (cdr(assq 'access_token acount-data))))
-                 (let ((name (car (org-element-property :title h2)))
-		       (cid (org-element-property :CALENDAR-ID h2))
-                       (max (format-time-string
-                             org-sgcal-request-time-format
-                             (time-add (current-time) (days-to-time org-sgcal-up-days))))
-                       (min (format-time-string
-                             org-sgcal-request-time-format
-                             (time-subtract (current-time) (days-to-time org-sgcal-down-days))))
-                       (new_h2))
-                   (setq new_h2 (org-sgcal--create-headline `(,name 2 nil)
-                                                           `(("CALENDAR-ID" . ,cid))))
-		   (setq new_h2 (apply #'org-element-adopt-elements
-                                 new_h2 (org-sgcal--parse-event-list
-                                         (org-sgcal-get-event-list cid client-secret atoken min max) 3)))
-                   
-                   (org-element-extract-element h2)
-                   (setq h1 (org-element-adopt-elements h1 new_h2)))
-                 (erase-buffer)
-                 (insert (org-element-interpret-data ele))
-		 (org-indent-region (point-min) (point-max)))
-             (message (concat " Can't find access-token for " title)))))))))
+  (org-sgcal--update-level3-headlines (lambda (&rest argv)
+                                        (apply #'org-sgcal-get-event-list argv))))
 
 
 ;;; http request functions
@@ -377,9 +350,46 @@ String to format that `data-to-time' can accept"
                  (if account
                      (let ((rtoken (cdr (assq 'refresh_token account))))
                        (setcdr (assq 'access_token account)
-			       (cdr (assq 'access_token (funcall #'refresh-fun client-id client-secret rtoken)))))
+			       (cdr (assq 'access_token (funcall refresh-fun client-id client-secret rtoken)))))
                    (add-to-list 'org-sgcal-token-alist
-				`(,(intern title) . ,(funcall #'request-fun client-id client-secret title))))))))))
+				`(,(intern title) . ,(funcall request-fun client-id client-secret title))))))))))
+
+(defun org-sgcal--update-level3-headlines (get-events-fun)
+  "Fetch all events according by settings of current buffer.
+This function will erase current buffer if success."
+  (interactive)
+  (let ((ele (org-element-parse-buffer)))
+    (org-sgcal--headline-map
+     2 ele
+     (lambda (h1 h2)
+       (let ((title (substring-no-properties (car (org-element-property :title h1))))
+	     (client-id (org-element-property :CLIENT-ID h1))
+	     (client-secret (org-element-property :CLIENT-SECRET h1)))
+         (let ((account (assq (intern title) org-sgcal-token-alist)))
+           (if account
+               (let* ((acount-data (cdr account))
+                      (atoken (cdr(assq 'access_token acount-data))))
+                 (let ((name (car (org-element-property :title h2)))
+		       (cid (org-element-property :CALENDAR-ID h2))
+                       (max (format-time-string
+                             org-sgcal-request-time-format
+                             (time-add (current-time) (days-to-time org-sgcal-up-days))))
+                       (min (format-time-string
+                             org-sgcal-request-time-format
+                             (time-subtract (current-time) (days-to-time org-sgcal-down-days))))
+                       (new_h2))
+                   (setq new_h2 (org-sgcal--create-headline `(,name 2 nil)
+                                                           `(("CALENDAR-ID" . ,cid))))
+		   (setq new_h2 (apply #'org-element-adopt-elements
+                                 new_h2 (org-sgcal--parse-event-list
+                                         (funcall get-events-fun cid client-secret atoken min max) 3)))
+                   
+                   (org-element-extract-element h2)
+                   (setq h1 (org-element-adopt-elements h1 new_h2)))
+                 (erase-buffer)
+                 (insert (org-element-interpret-data ele))
+		 (org-indent-region (point-min) (point-max)))
+             (message (concat " Can't find access-token for " title)))))))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
