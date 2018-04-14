@@ -51,7 +51,7 @@
   (org-sgcal--update-token-alist (lambda (&rest argv)
                                    (apply #'org-sgcal-request-token argv))
                                  (lambda (&rest argv)
-                                   (apply $'org-sgcal-refresh-token argv))))
+                                   (apply #'org-sgcal-refresh-token argv))))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
