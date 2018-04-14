@@ -22,7 +22,7 @@
   "URL for event management")
 
 (defconst org-sgcal-request-time-format
-  "%Y-%m-%dT%H:%M:%SZ"
+  '("%Y-%m-%d" .  "%Y-%m-%dT%H:%M:%SZ")
   "time format for get event list")
 
 (defcustom org-sgcal-timezone "Asia/Taipei"
@@ -61,12 +61,14 @@ This function will erase current buffer if success."
 (defun org-sgcal-post-at-point ()
   "Post or update events at point"
   (interactive)
-  (org-sgcal--apply-at-point #'org-sgcal-post-event))
+  (if (org-sgcal-apply-and-update-at-point #'org-sgcal-post-event)
+      (message "Post Success")))
 
 (defun org-sgcal-delete-at-point ()
   "Delete event at point if available"
   (interactive)
-  (org-sgcal--delete-at-point-and-apply #'org-sgcal-delete-event))
+  (if (org-sgcal--delete-at-point-and-apply #'org-sgcal-delete-event #'y-or-n-p)
+      (message "Delete Success")))
 
 
 ;;; http request functions
@@ -163,7 +165,7 @@ It returns the code provided by the service."
 			  ("summary" . ,smry)
 			  ("location" . ,loc)
 			  ("description" . ,desc)
-			  ,(when color-id `("colorId" . ,color-id))))
+			  ("colorId" . ,color-id)))
      :params `(("access_token" . ,a-token)
 	       ("key" . ,client-secret)
 	       ("grant_type" . "authorization_code"))
@@ -296,7 +298,7 @@ contents is org struct text below property drawer
 		     (1- level) (org-element-contents h) fun (cons h argv)))
 	nil nil 'headline)))
 
-(defun org-sgcal--parse-item (item)
+(defun org-sgcal--parse-item (item level)
   "parse json object from google api"
   (let ((id (cdr (assq 'id item)))
         (sumy (cdr (assq 'summary item)))
@@ -331,7 +333,7 @@ contents is org struct text below property drawer
 to org element AVL tree
 LEVEL will set to each headline"
   (let ((items (cdr (assq 'items response-json))))
-    (mapcar 'org-sgcal--parse-item items)))
+    (mapcar (lambda (item) (org-sgcal--parse-item item level)) items)))
 
 (defun org-sgcal--json-read ()
   (json-read-from-string
@@ -380,12 +382,16 @@ This function will erase current buffer if success."
                       (atoken (cdr (assq 'access_token acount-data))))
                  (let ((name (car (org-element-property :title h2)))
 		       (cid (org-element-property :CALENDAR-ID h2))
-                       (max (format-time-string
-                             org-sgcal-request-time-format
-                             (time-add (current-time) (days-to-time org-sgcal-up-days))))
-                       (min (format-time-string
-                             org-sgcal-request-time-format
-                             (time-subtract (current-time) (days-to-time org-sgcal-down-days))))
+                       (max (convert-time-to-string
+			     (decode-time
+			      (time-add
+			       (current-time)
+			       (days-to-time org-sgcal-up-days)))))
+                       (min (convert-time-to-string
+                             (decode-time
+			      (time-subtract
+			       (current-time)
+			       (days-to-time org-sgcal-down-days)))))
                        (new_h2))
                    (setq new_h2 (org-sgcal--create-headline `(,name 2 nil)
                                                            `(("CALENDAR-ID" . ,cid))))
@@ -528,7 +534,10 @@ according to the search.
 		 (progn
 		   (setq newargv
 			 (plist-put newargv :color-id
-				    (car (read-from-string (org-element-property :COLOR-ID here)))))
+				    (let ((color-id-plist (org-element-property :COLOR-ID here)))
+				      (if color-id-plist
+					  (car (read-from-string (org-element-property :COLOR-ID here)))
+					nil))))
 		   (setq newargv (plist-put newargv :cid (org-element-property :CALENDAR-ID here)))
 		   (outline-up-heading 1)
 		   (org-sgcal--search-up newargv)))
@@ -566,25 +575,77 @@ this function should format like
 	    
 	    (let* ((account (assq (intern title) org-sgcal-token-alist))
 		   (atoken (cdr (assq 'access_token account)))
-		   (smry (concat (when todo (concat todo " ")) name)))
+		   (smry (concat (when todo (concat todo " ")) name))
+		   (start-date (if start (convert-time-to-string start)))
+		   (end-date (cond (end (convert-time-to-string end))
+				   ((not (nth 2 start))
+				    (convert-time-to-string
+				     `(nil nil nil ,(1+ (nth 3 start))
+					 ,(nth 4 start)
+					 ,(nth 5 start)
+					 nil))))))
 	      (when (and cid
 			 atoken
-			 client-secret)
-		(funcall fun cid atoken client-secret
-			 eid start end smry nil desc (plist-get color-id (intern todo))))))))))
+			 client-secret
+			 start
+			 name)
+		(funcall
+		 fun cid atoken client-secret
+		 eid start-date end-date
+		 smry nil desc
+		 (if todo (plist-get color-id (intern todo)) nil)))))))))
 
-(defun org-sgcal--delete-at-point-and-apply (delete-request-fun)
-  "Delete event at point if available"
+(defun org-sgcal--delete-at-point-and-apply (delete-request-fun ask-fun)
+  "run funtion at point if available. if apply success,
+delete heading at point"
   (interactive)
   (when (org-sgcal--apply-at-point (lambda (cid a-token client-secret eid
 						start end smry loc desc color-id)
-				     (when (and cid a-token client-secret eid)
-				       (funcall delete-request-fun cid a-token client-secret eid))))
+				     (if (and cid a-token client-secret eid)
+					 (when (funcall
+						ask-fun
+						(format "Do you really want delete event?\n%s\n" smry))
+					   (funcall delete-request-fun cid a-token client-secret eid)))))
     (when (not (org-at-heading-p))
       (org-previous-visible-heading 1))
     (let ((here (org-element-at-point)))
       (delete-region (org-element-property :begin here)
 		     (org-element-property :end here)))))
+
+(defun convert-time-to-string (date-time)
+  "date-time is a list which format is the same
+as `decode-time' return"
+  (if (nth 2 date-time)
+      (format-time-string
+       
+       (cdr org-sgcal-request-time-format)
+       (apply #'encode-time
+              date-time))
+    (progn
+      (format-time-string
+       (car org-sgcal-request-time-format)
+       (apply #'encode-time
+	      `(0 0 0
+		  ,(nth 3 date-time)
+		  ,(nth 4 date-time)
+		  ,(nth 5 date-time)
+		  nil))))))
+
+(defun org-sgcal-apply-and-update-at-point (post-fun)
+  "Apply update heading at point (if success)"
+  (let ((ret (org-sgcal--apply-at-point post-fun)))
+    (if ret
+	(progn (when (not (org-at-heading-p))
+		 (org-previous-visible-heading 1))
+	       (let ((here (org-element-at-point)))
+		 (org-sgcal--replace-element here (org-sgcal--parse-item ret 3)))
+	       (org-previous-visible-heading 1)
+	       (let ((here (org-element-at-point)))
+		 (if here
+		     (org-indent-region
+		      (org-element-property :begin here)
+		      (org-element-property :end here)))
+		 t)))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here

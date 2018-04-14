@@ -474,10 +474,10 @@ replace headline currectly"
 	     (org-sgcal--apply-at-point #'dummy-fun-for-apply-at-point))
 	   '("teststest@email.com"
 	     "aacceess"
-	    "test-secret" "test-id"
-	    (0 34 12 10 4 2018 nil)
-	    (0 34 13 10 4 2018 nil)
-	    "TODO test headline3" nil "abcdefg\n" 2))))
+	     "test-secret" "test-id"
+	     "2018-04-10T12:34:00Z"
+	     "2018-04-10T13:34:00Z"
+	     "TODO test headline3" nil "abcdefg\n" 2))))
 
 (ert-deftest test-org-sgcal/delete-at-point-and-apply ()
   "test for delete-at-point-and-apply"
@@ -504,7 +504,7 @@ replace headline currectly"
 			     "    :END:\n"
 			     "abcdefg\n")
 	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
-	     (org-sgcal--delete-at-point-and-apply #'return-nil)
+	     (org-sgcal--delete-at-point-and-apply #'return-nil #'return-t)
 	     (buffer-string))
 	  (concat "* test headline1\n"
 		  "  :PROPERTIES:\n"
@@ -548,7 +548,7 @@ replace headline currectly"
 			     "    :END:\n"
 			     "abcdefg\n")
 	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
-	     (org-sgcal--delete-at-point-and-apply #'return-t)
+	     (org-sgcal--delete-at-point-and-apply #'return-t #'return-t)
 	     (buffer-string))
 	  (concat "* test headline1\n"
 		  "  :PROPERTIES:\n"
