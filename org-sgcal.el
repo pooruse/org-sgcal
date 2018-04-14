@@ -141,7 +141,7 @@ It returns the code provided by the service."
 
 (defun org-sgcal-post-event (cid start end smry loc desc
                                  a-token client-secret
-                                 &optional eid)
+                                 &optional eid color-id)
   "post or update event in specify calendar(depends on eid). "
   (let ((data)
         (stime (if (> (length start) 11) "dateTime" "date")))
@@ -155,7 +155,8 @@ It returns the code provided by the service."
 			  ("end" (,stime ,end) ("timeZone" . ,org-sgcal-timezone))
 			  ("summary" . ,smry)
 			  ("location" . ,loc)
-			  ("description" . ,desc)))
+			  ("description" . ,desc)
+			  ,(when color-id `("colorId" . ,color-id))))
      :params `(("access_token" . ,a-token)
 	       ("key" . ,client-secret)
 	       ("grant_type" . "authorization_code"))

@@ -330,7 +330,7 @@ replace headline currectly"
 (ert-deftest test-org-sgcal/token-and-fetch ()
   "test for update-tokens-alist and update-level3-headlines"
   (should (equal (with-temp-buffer
-		   (insert (concat "* My self\n"
+		   (insert (concat "* My self for test\n"
 				   "  :PROPERTIES:\n"
 				   "  :CLIENT-ID: test-client-id\n"
 				   "  :CLIENT-SECRET: test-client-secret\n"
@@ -342,7 +342,7 @@ replace headline currectly"
 		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
 		   (org-sgcal--update-level3-headlines #'dummy-events-list)
 		   (buffer-string))
-		 (concat "* My self\n"
+		 (concat "* My self for test\n"
 			 ":PROPERTIES:\n"
 			 ":CLIENT-ID: test-client-id\n"
 			 ":CLIENT-SECRET: test-client-secret\n"
