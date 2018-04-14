@@ -401,8 +401,7 @@ This function will erase current buffer if success."
                    
                    (org-element-extract-element h2)
                    (setq h1 (org-element-adopt-elements h1 new_h2)))
-                 (erase-buffer)
-                 (insert (org-element-interpret-data ele))
+                 (org-sgcal--replace-element h1 h1)
 		 (org-indent-region (point-min) (point-max)))
              (message (concat " Can't find access-token for " title)))))))))
 
