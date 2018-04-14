@@ -121,7 +121,7 @@ It returns the code provided by the service."
 		    (message (format "Error code: %s" error-thrown)))))
     data))
 
-(defun org-sgcal-get-event-list (cid client-secret a-token min max)
+(defun org-sgcal-get-event-list (cid a-token client-secret min max)
   "Get event list from calendar"
   (let (data)
     (request
@@ -144,9 +144,8 @@ It returns the code provided by the service."
 		    (message (format "Error code: %s" error-thrown)))))
     data))
 
-(defun org-sgcal-post-event (cid start end smry loc desc
-                                 a-token client-secret
-                                 &optional eid color-id)
+(defun org-sgcal-post-event (cid a-token client-secret eid
+				 start end smry loc desc color-id)
   "post or update event in specify calendar(depends on eid). "
   (let ((data)
         (stime (if (> (length start) 11) "dateTime" "date")))
@@ -175,7 +174,7 @@ It returns the code provided by the service."
 		 (setq data (request-response-data response)))))
     data))
 
-(defun org-sgcal-delete-event (cid eid a-token client-secret)
+(defun org-sgcal-delete-event (cid a-token client-secret eid)
   "delete specify event from calendar"
   (let (out)
     (request
@@ -375,7 +374,7 @@ This function will erase current buffer if success."
          (let ((account (assq (intern title) org-sgcal-token-alist)))
            (if account
                (let* ((acount-data (cdr account))
-                      (atoken (cdr(assq 'access_token acount-data))))
+                      (atoken (cdr (assq 'access_token acount-data))))
                  (let ((name (car (org-element-property :title h2)))
 		       (cid (org-element-property :CALENDAR-ID h2))
                        (max (format-time-string
@@ -389,7 +388,7 @@ This function will erase current buffer if success."
                                                            `(("CALENDAR-ID" . ,cid))))
 		   (setq new_h2 (apply #'org-element-adopt-elements
                                  new_h2 (org-sgcal--parse-event-list
-                                         (funcall get-events-fun cid client-secret atoken min max) 3)))
+                                         (funcall get-events-fun cid atoken client-secret min max) 3)))
                    
                    (org-element-extract-element h2)
                    (setq h1 (org-element-adopt-elements h1 new_h2)))
@@ -427,14 +426,18 @@ Example 1
 :END:
 
 => *** head3
+DEADLINE: <2018-02-28 三 18:00> SCHEDULED: <2018-02-28 三 17:00>
 :PROPERTIES:
 :ID: test-id
 :UPDATED: test-updated
 :END:
 
 returns 
- (:id test-id :updated test-updated 
+ (:name head3 :id test-id :updated test-updated 
+ :start (nil 0 17 28 2 2018 nil)
+ :end (nil 0 18 28 2 2018 nil)
  :color-id test-color-id :cid test-cid
+ :title head1
  :client-secret test-client-secret
  :client-id test-client-id)
 
@@ -453,7 +456,8 @@ Example 2
 :END:
 
 returns 
- (:id test-id :updated test-updated 
+ (:name head3 :id test-id :updated test-updated 
+ :title head1
  :client-secret test-client-secret
  :client-id test-client-id)
 
@@ -479,19 +483,58 @@ according to the search.
 				      (if todo-keyword
 					  (substring-no-properties todo-keyword)
 					nil))))
-		   
+		   (setq newargv
+			 (plist-put newargv :start
+				    (let ((stamp (org-element-property :scheduled here)))
+				      (if stamp
+					  `(0
+					    ,(org-element-property :minute-start stamp)
+					    ,(org-element-property :hour-start stamp)
+					    ,(org-element-property :day-start stamp)
+					    ,(org-element-property :month-start stamp)
+					    ,(org-element-property :year-start stamp)
+					    nil)
+					nil)
+				      )))
+		   (setq newargv
+			 (plist-put newargv :end
+				    (let ((stamp (org-element-property :deadline here)))
+				      (if stamp
+					  `(0
+					    ,(org-element-property :minute-start stamp)
+					    ,(org-element-property :hour-start stamp)
+					    ,(org-element-property :day-start stamp)
+					    ,(org-element-property :month-start stamp)
+					    ,(org-element-property :year-start stamp)
+					    nil)
+					nil)
+				      )))
 		   (setq newargv (plist-put newargv :id (org-element-property :ID here)))
 		   (setq newargv (plist-put newargv :updated (org-element-property :UPDATED here)))
+		   (setq newargv (plist-put newargv :contents
+					    (let ((end-position (org-element-property :end here)))
+					      (goto-char (1- end-position))
+					      (let ((para (org-element-at-point)))
+						(if (eq 'paragraph (org-element-type para))
+						    (buffer-substring (org-element-property :begin para)
+								      (org-element-property :end para))
+						  nil)))))
 		   (outline-up-heading 1)
 		   (org-sgcal--search-up newargv)))
 		((= level 2)
 		 (progn
-		   (setq newargv (plist-put newargv :color-id (org-element-property :COLOR-ID here)))
+		   (setq newargv
+			 (plist-put newargv :color-id
+				    (car (read-from-string (org-element-property :COLOR-ID here)))))
 		   (setq newargv (plist-put newargv :cid (org-element-property :CALENDAR-ID here)))
 		   (outline-up-heading 1)
 		   (org-sgcal--search-up newargv)))
 		((= level 1)
 		 (progn
+		   (setq newargv
+			 (plist-put newargv :title
+				    (substring-no-properties
+				     (org-element-property :title here))))
 		   (setq newargv (plist-put newargv :client-id (org-element-property :CLIENT-ID here)))
 		   (setq newargv (plist-put newargv :client-secret (org-element-property :CLIENT-SECRET here)))
 		   newargv))
@@ -506,16 +549,28 @@ this function should format like
       (org-previous-visible-heading 1))
     (let ((props (org-sgcal--search-up)))
       (if props
-	  (let ((client-id (plist-get props :client-id))
-		(client-secret (plist-get props :client-secret))
+	  (let ((name (plist-get props :name))
+		(todo (plist-get props :todo))
+		(start (plist-get props :start))
+		(end (plist-get props :end))
+		(desc (plist-get props :contents))
+		(eid (plist-get props :id))
+		(updated (plist-get props :updated))
 		(cid (plist-get props :cid))
 		(color-id (plist-get props :color-id))
-		(updated (plist-get props :updated))
-		(id (plist-get props :id)))
-	    (when (and client-id
-		       client-secret
-		       cid)))
-	nil)) nil))
+		(client-secret (plist-get props :client-secret))
+		(title (plist-get props :title)))
+	    
+	    (let* ((account (assq (intern title) org-sgcal-token-alist))
+		   (atoken (cdr (assq 'access_token acount)))
+		   (smry (concat (when todo (concat todo " ")) name)))
+	      (when (and cid
+			 atoken
+			 client-secret)
+		(funcall fun cid atoken client-secret
+			 eid start end smry nil desc (plist-get color-id (intern todo))))))
+	nil))
+    nil))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here

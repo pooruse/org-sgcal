@@ -381,7 +381,7 @@ replace headline currectly"
 			     "** test headline2\n"
 			     "   :PROPERTIES:\n"
 			     "   :CALENDAR-ID: teststest@email.com\n"
-			     "   :COLOR-ID: (1 . 2)\n"
+			     "   :COLOR-ID: (TODO 2 DONE 3)\n"
 			     "   :END:\n"
 			     "\n"
 			     "*** TODO test headline3\n"
@@ -392,4 +392,49 @@ replace headline currectly"
 			     "    :END:\n")
 		     (org-previous-visible-heading 1)
 		     (org-sgcal--search-up))
-		   '(:name "test headline3" :todo "TODO" :id "test-id" :updated "2018-04-11T23:46:09.411Z" :color-id "(1 . 2)" :cid "teststest@email.com" :client-id "test-client-id" :client-secret "test-secret"))))
+		   '(:name "test headline3"
+			   :todo "TODO"
+			   :start (0 34 12 10 4 2018 nil)
+			   :end (0 34 13 10 4 2018 nil)
+			   :id "test-id" :updated "2018-04-11T23:46:09.411Z"
+			   :contents nil
+			   :color-id (TODO 2 DONE 3)
+			   :cid "teststest@email.com"
+			   :title "test headline1"
+			   :client-id "test-client-id"
+			   :client-secret "test-secret")))
+    
+    (should (equal (with-temp-buffer
+		     (org-mode)
+		     (insert "* test headline1\n"
+			     "  :PROPERTIES:\n"
+			     "  :CLIENT-ID: test-client-id\n"
+			     "  :CLIENT-SECRET: test-secret\n"
+			     "  :END:\n"
+			     "\n"
+			     "** test headline2\n"
+			     "   :PROPERTIES:\n"
+			     "   :CALENDAR-ID: teststest@email.com\n"
+			     "   :COLOR-ID: (TODO 2 DONE 3)\n"
+			     "   :END:\n"
+			     "\n"
+			     "*** TODO test headline3\n"
+			     "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+			     "    :PROPERTIES:\n"
+			     "    :ID:       test-id\n"
+			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+			     "    :END:\n"
+			     "abcdefg\n")
+		     (org-previous-visible-heading 1)
+		     (org-sgcal--search-up))
+		   '(:name "test headline3"
+			   :todo "TODO"
+			   :start (0 34 12 10 4 2018 nil)
+			   :end (0 34 13 10 4 2018 nil)
+			   :id "test-id" :updated "2018-04-11T23:46:09.411Z"
+			   :contents "abcdefg\n"
+			   :color-id (TODO 2 DONE 3)
+			   :cid "teststest@email.com"
+			   :title "test headline1"
+			   :client-id "test-client-id"
+			   :client-secret "test-secret"))))
