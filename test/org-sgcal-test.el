@@ -1,7 +1,7 @@
 (defun test-org-element ()
   "print current buffer org struct in *scratch"
   (interactive)
-  (let ((ele (org-element-parse-buffer)))
+  (let ((ele (org-element-at-point)))
     (test-helper ele)))
 
 (defun test-helper (ele)
@@ -327,6 +327,7 @@ replace headline currectly"
 	       (description . "Hello word")
 	       (summary . "hee"))]))
   )
+
 (ert-deftest test-org-sgcal/token-and-fetch ()
   "test for update-tokens-alist and update-level3-headlines"
   (should (equal (with-temp-buffer
@@ -366,3 +367,28 @@ replace headline currectly"
 			 "   :END:\n"
 			 "   Poo boo\n"))))
 
+
+(ert-deftest test-org-sgcal/search-up ()
+    "test for search-up"
+  (should (equal (with-temp-buffer
+		   (insert "* test headline1\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-secret\n"
+			   "  :END:\n"
+			   "\n"
+			   "** test headline2\n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: teststest@email.com\n"
+			   "   :COLOR-ID: (1 . 2)\n"
+			   "   :END:\n"
+			   "\n"
+			   "*** test headline3\n"
+			   "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+			   "    :PROPERTIES:\n"
+			   "    :ID:       test-id\n"
+			   "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+			   "    :END:\n")
+		   (org-previous-visible-heading 1)
+		   (org-sgcal--search-up))
+		 '(:id "test-id" :updated "2018-04-11T23:46:09.411Z" :color-id "(1 . 2)" :cid "teststest@email.com" :client-id "test-client-id" :client-secret "test-secret"))))

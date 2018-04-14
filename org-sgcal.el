@@ -393,7 +393,7 @@ This function will erase current buffer if success."
 		 (org-indent-region (point-min) (point-max)))
              (message (concat " Can't find access-token for " title)))))))))
 
-(defun org-sgcal--search-up-from-here (&optional argv)
+(defun org-sgcal--search-up (&optional argv)
   "this function will search property's and return it as plist
 when the point is at headline level 3, 
 it will try to find id and updated 
@@ -464,20 +464,20 @@ according to the search.
 	(let ((level (org-element-property :level here)))
 	  (cond ((= level 3)
 		 (progn
-		   ((plist-put newargv :id (org-element-property :ID here)))
-		   ((plist-put newargv :updated (org-element-property :UPDATED here)))
-		   (outline-up-heading)
+		   (setq newargv (plist-put newargv :id (org-element-property :ID here)))
+		   (setq newargv (plist-put newargv :updated (org-element-property :UPDATED here)))
+		   (outline-up-heading 1)
 		   (org-sgcal--search-up-from-here newargv)))
 		((= level 2)
 		 (progn
-		   ((plist-put newargv :color-id (org-element-property :COLOR-ID here)))
-		   ((plist-put newargv :cid (org-element-property :CALENDAR-ID here)))
-		   (outline-up-heading)
+		   (setq newargv (plist-put newargv :color-id (org-element-property :COLOR-ID here)))
+		   (setq newargv (plist-put newargv :cid (org-element-property :CALENDAR-ID here)))
+		   (outline-up-heading 1)
 		   (org-sgcal--search-up-from-here newargv)))
 		((= level 1)
 		 (progn
-		   ((plist-put newargv :client-id (org-element-property :CLIENT-ID here)))
-		   ((plist-put newargv :client-secret (org-element-property :CLIENT-SECRET here)))
+		   (setq newargv (plist-put newargv :client-id (org-element-property :CLIENT-ID here)))
+		   (setq newargv (plist-put newargv :client-secret (org-element-property :CLIENT-SECRET here)))
 		   newargv))
 		(t nil)))
       nil)))
