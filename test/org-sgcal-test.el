@@ -127,28 +127,28 @@ replace headline currectly"
   (should
    (equal
     (with-temp-buffer
-      (insert (concat "* TODO test\n"
-                      "DEADLINE: "
-                      (convert-time-to-org-string '(0 0 nil 3 5 2018 nil)) 
-                      " SCHEDULED: "
-                      (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
-                      "\n"
-                      ":PROPERTIES:\n"
-                      ":proper1:  1234\n"
-                      ":proper2:  abcde\n"
-                      ":END:\n"
-                      "Oh my god!\n"
-                      "* DONE test3\n"
-                      "DEADLINE: "
-                      (convert-time-to-org-string '(0 0 nil 3 7 2018 nil)) 
-                      " SCHEDULED: "
-                      (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
-                      "\n"
-                      ":PROPERTIES:\n"
-                      ":proper1:  weqre\n"
-                      ":proper2:  bbb\n"
-                      ":END:\n"
-                      "Oh my godness!\n"))
+      (insert "* TODO test\n"
+	      "DEADLINE: "
+	      (convert-time-to-org-string '(0 0 nil 3 5 2018 nil)) 
+	      " SCHEDULED: "
+	      (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
+	      "\n"
+	      ":PROPERTIES:\n"
+	      ":proper1:  1234\n"
+	      ":proper2:  abcde\n"
+	      ":END:\n"
+	      "Oh my god!\n"
+	      "* DONE test3\n"
+	      "DEADLINE: "
+	      (convert-time-to-org-string '(0 0 nil 3 7 2018 nil)) 
+	      " SCHEDULED: "
+	      (convert-time-to-org-string '(0 0 nil 4 4 2018 nil)) 
+	      "\n"
+	      ":PROPERTIES:\n"
+	      ":proper1:  weqre\n"
+	      ":proper2:  bbb\n"
+	      ":END:\n"
+	      "Oh my godness!\n")
       (let ((ele (org-element-parse-buffer)))
 	(org-element-map ele
 	    'headline
@@ -221,19 +221,19 @@ replace headline currectly"
   "test for `org-sgcal--headline-map'"
   (should (equal
            (with-temp-buffer
-             (insert (concat "* RD Team\n"
-                             "  :PROPERTIES:\n"
-                             "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
-                             "  :CLIENT-SECRET: 12341283461278561\n"
-                             "  :END:\n"
-                             "** sub title\n"
-                             "   :PROPERTIES:\n"
-                             "   :CALENDAR-ID: abcde\n"
-                             "   :END:\n"
-                             "** sub title2\n"
-                             "   :PROPERTIES:\n"
-                             "   :CALENDAR-ID: eeeee\n"
-                             "   :END:\n"))
+             (insert "* RD Team\n"
+		     "  :PROPERTIES:\n"
+		     "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+		     "  :CLIENT-SECRET: 12341283461278561\n"
+		     "  :END:\n"
+		     "** sub title\n"
+		     "   :PROPERTIES:\n"
+		     "   :CALENDAR-ID: abcde\n"
+		     "   :END:\n"
+		     "** sub title2\n"
+		     "   :PROPERTIES:\n"
+		     "   :CALENDAR-ID: eeeee\n"
+		     "   :END:\n")
              (let ((ele (org-element-parse-buffer)))
                (org-sgcal--headline-map
                 1 ele (lambda (h1)
@@ -331,15 +331,15 @@ replace headline currectly"
 (ert-deftest test-org-sgcal/token-and-fetch ()
   "test for update-tokens-alist and update-level3-headlines"
   (should (equal (with-temp-buffer
-		   (insert (concat "* My self for test\n"
-				   "  :PROPERTIES:\n"
-				   "  :CLIENT-ID: test-client-id\n"
-				   "  :CLIENT-SECRET: test-client-secret\n"
-				   "  :END:\n"
-				   "** main-cal\n"
-				   "   :PROPERTIES:\n"
-				   "   :CALENDAR-ID: test_cid\n"
-				   "   :END:\n"))
+		   (insert "* My self for test\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** main-cal\n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
 		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
 		   (org-sgcal--update-level3-headlines #'dummy-events-list)
 		   (buffer-string))
@@ -391,4 +391,4 @@ replace headline currectly"
 			   "    :END:\n")
 		   (org-previous-visible-heading 1)
 		   (org-sgcal--search-up))
-		 '(:id "test-id" :updated "2018-04-11T23:46:09.411Z" :color-id "(1 . 2)" :cid "teststest@email.com" :client-id "test-client-id" :client-secret "test-secret"))))
+		 '(:name "test headline3" :todo nil :id "test-id" :updated "2018-04-11T23:46:09.411Z" :color-id "(1 . 2)" :cid "teststest@email.com" :client-id "test-client-id" :client-secret "test-secret"))))
