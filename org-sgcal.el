@@ -205,7 +205,8 @@ ele-A must be a element exists in current buffer"
 	(body-B (org-element-interpret-data ele-B)))
     (goto-char beg-A)
     (delete-region beg-A end-A)
-    (insert body-B)))
+    (insert body-B)
+    (cons beg-A (+ beg-A (length body-B)))))
 
 (defun org-sgcal--create-headline (head &optional properties contents start end)
   "head is a list which contains (title level todo-keyword)
@@ -391,6 +392,95 @@ This function will erase current buffer if success."
                  (insert (org-element-interpret-data ele))
 		 (org-indent-region (point-min) (point-max)))
              (message (concat " Can't find access-token for " title)))))))))
+
+(defun org-sgcal--search-up-from-here (&optional argv)
+  "this function will search property's and return it as plist
+when the point is at headline level 3, 
+it will try to find id and updated 
+
+when the point is at headline level 2, 
+it will try to find cid and color-id 
+
+when the point is at headline headline level 1,
+it will try to find client-id client-secret.
+this function will also search up by `outline-up-headling'.
+
+For example. => means where is your point
+
+Example 1
+
+* head1
+:PROPERTIES:
+:CLIENT-SECRET: test-client-secret
+:CLIENT-ID: test-client-id
+:END:
+
+** head2
+:PROPERTIES:
+:COLOR-ID: test-color-id
+:CALENDAR-ID: test-cid
+:END:
+
+=> *** head3
+:PROPERTIES:
+:ID: test-id
+:UPDATED: test-updated
+:END:
+
+returns 
+ (:id test-id :updated test-updated 
+ :color-id test-color-id :cid test-cid
+ :client-secret test-client-secret
+ :client-id test-client-id)
+
+Example 2
+
+* head1
+:PROPERTIES:
+:CLIENT-SECRET: test-client-secret
+:CLIENT-ID: test-client-id
+:END:
+
+=> *** head3
+:PROPERTIES:
+:ID: test-id
+:UPDATED: test-updated
+:END:
+
+returns 
+ (:id test-id :updated test-updated 
+ :client-secret test-client-secret
+ :client-id test-client-id)
+
+note: 
+1. if your point is not at headline,
+this function will return nil immediately
+2. by side-effect the point will be changed
+according to the search. 
+"
+  (let ((here (org-element-at-point))
+	(newargv argv))
+    (if (eq 'headline (org-element-type here))
+	(let ((level (org-element-property :level here)))
+	  (cond ((= level 3)
+		 (progn
+		   ((plist-put newargv :id (org-element-property :ID here)))
+		   ((plist-put newargv :updated (org-element-property :UPDATED here)))
+		   (outline-up-heading)
+		   (org-sgcal--search-up-from-here newargv)))
+		((= level 2)
+		 (progn
+		   ((plist-put newargv :color-id (org-element-property :COLOR-ID here)))
+		   ((plist-put newargv :cid (org-element-property :CALENDAR-ID here)))
+		   (outline-up-heading)
+		   (org-sgcal--search-up-from-here newargv)))
+		((= level 1)
+		 (progn
+		   ((plist-put newargv :client-id (org-element-property :CLIENT-ID here)))
+		   ((plist-put newargv :client-secret (org-element-property :CLIENT-SECRET here)))
+		   newargv))
+		(t nil)))
+      nil)))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
