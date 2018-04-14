@@ -562,3 +562,60 @@ replace headline currectly"
 		  "   :COLOR-ID: (TODO 2 DONE 3)\n"
 		  "   :END:\n"
 		  "\n"))))
+
+(defun dummy-post-event (&rest argv)
+  "dummy post event"
+  '((summary . "OK I am good")
+    (id . "Id is here")
+    (description . "Hey Hey")
+    (start . ((date . "2018-04-03")))
+    (end . ((date . "2018-04-05")))
+    (updated . "2018-04-04T00:05:30Z")))
+
+(ert-deftest test-org-sgcal/apply-and-update-at-point ()
+  "test apply-and-update-at-point"
+  (should
+   (equal (with-temp-buffer
+	     (org-mode)
+	     (insert "* test headline1\n"
+			     "  :PROPERTIES:\n"
+			     "  :CLIENT-ID: test-client-id\n"
+			     "  :CLIENT-SECRET: test-secret\n"
+			     "  :END:\n"
+			     "\n"
+			     "** test headline2\n"
+			     "   :PROPERTIES:\n"
+			     "   :CALENDAR-ID: teststest@email.com\n"
+			     "   :COLOR-ID: (TODO 2 DONE 3)\n"
+			     "   :END:\n"
+			     "\n"
+			     "*** TODO test headline3\n"
+			     "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+			     "    :PROPERTIES:\n"
+			     "    :ID:       test-id\n"
+			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+			     "    :END:\n"
+			     "abcdefg\n")
+	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+	     (org-sgcal-apply-and-update-at-point #'dummy-post-event)
+	     (buffer-string))
+	  
+	  (concat "* test headline1\n"
+		  "  :PROPERTIES:\n"
+		  "  :CLIENT-ID: test-client-id\n"
+		  "  :CLIENT-SECRET: test-secret\n"
+		  "  :END:\n"
+		  "\n"
+		  "** test headline2\n"
+		  "   :PROPERTIES:\n"
+		  "   :CALENDAR-ID: teststest@email.com\n"
+		  "   :COLOR-ID: (TODO 2 DONE 3)\n"
+		  "   :END:\n"
+		  "\n"
+		  "*** OK I am good\n"
+		  "    DEADLINE: <2018-04-05 四> SCHEDULED: <2018-04-03 二>\n"
+		  "    :PROPERTIES:\n"
+		  "    :ID:       Id is here\n"
+		  "    :UPDATED:  2018-04-04T00:05:30Z\n"
+		  "    :END:\n"
+		  "    Hey Hey\n"))))

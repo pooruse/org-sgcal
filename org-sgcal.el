@@ -638,7 +638,8 @@ as `decode-time' return"
 	(progn (when (not (org-at-heading-p))
 		 (org-previous-visible-heading 1))
 	       (let ((here (org-element-at-point)))
-		 (org-sgcal--replace-element here (org-sgcal--parse-item ret 3)))
+		 (org-sgcal--replace-element
+		  here (org-sgcal--parse-item ret 3)))
 	       (org-previous-visible-heading 1)
 	       (let ((here (org-element-at-point)))
 		 (if here
