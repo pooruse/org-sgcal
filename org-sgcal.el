@@ -42,8 +42,6 @@
 
 (defvar org-sgcal-token-alist nil)
 
-
-
 ;;; org-sgcal user functions
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
@@ -63,8 +61,13 @@ This function will erase current buffer if success."
 (defun org-sgcal-post-at-point ()
   "Post or update events at point"
   (interactive)
-  
-  )
+  (org-sgcal--apply-at-point #'org-sgcal-post-event))
+
+(defun org-sgcal-delete-at-point ()
+  "Delete event at point if available"
+  (interactive)
+  (org-sgcal--delete-at-point-and-apply #'org-sgcal-delete-event))
+
 
 ;;; http request functions
 (defun org-sgcal-request-authorization (client-id nickname)
@@ -569,6 +572,20 @@ this function should format like
 			 client-secret)
 		(funcall fun cid atoken client-secret
 			 eid start end smry nil desc (plist-get color-id (intern todo))))))))))
+
+(defun org-sgcal--delete-at-point-and-apply (fun)
+  "Delete event at point if available"
+  (interactive)
+  
+  (when (org-sgcal--apply-at-point (lambda (cid a-token client-secret eid
+						start end smry loc desc color-id)
+				     (when (and cid a-token client-secret eid)
+				       (funcall fun cid a-token client-secret eid))))
+    (when (not (org-at-heading-p))
+      (org-previous-visible-heading 1))
+    (let ((here (org-elemene-at-point)))
+      (delete-region (org-element-property :begin here)
+		     (org-element-property :begin end)))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
