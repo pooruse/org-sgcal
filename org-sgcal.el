@@ -548,7 +548,7 @@ this function should format like
     (when (not (org-at-heading-p))
       (org-previous-visible-heading 1))
     (let ((props (org-sgcal--search-up)))
-      (if props
+      (when props
 	  (let ((name (plist-get props :name))
 		(todo (plist-get props :todo))
 		(start (plist-get props :start))
@@ -562,15 +562,13 @@ this function should format like
 		(title (plist-get props :title)))
 	    
 	    (let* ((account (assq (intern title) org-sgcal-token-alist))
-		   (atoken (cdr (assq 'access_token acount)))
+		   (atoken (cdr (assq 'access_token account)))
 		   (smry (concat (when todo (concat todo " ")) name)))
 	      (when (and cid
 			 atoken
 			 client-secret)
 		(funcall fun cid atoken client-secret
-			 eid start end smry nil desc (plist-get color-id (intern todo))))))
-	nil))
-    nil))
+			 eid start end smry nil desc (plist-get color-id (intern todo))))))))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here

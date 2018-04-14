@@ -306,7 +306,7 @@ replace headline currectly"
 
 (defun dummy-refresh-token (client-id client-secret refresh-token)
   "return dummy token for test (only access_token"
-  '((refresh_token . (concat"new_rreeffrr"))))
+  '((access_token . (concat"new_rreeffrr"))))
 
 (defun dummy-events-list (&rest argv)
   "return dummy events list for test"
@@ -438,3 +438,42 @@ replace headline currectly"
 			   :title "test headline1"
 			   :client-id "test-client-id"
 			   :client-secret "test-secret"))))
+
+(defun dummy-fun-for-apply-at-point (cid atoken client-secret
+					 eid start end smry loc desc color-id)
+  "only for test"
+  `(,cid ,atoken ,client-secret ,eid ,start ,end ,smry ,loc ,desc ,color-id))
+
+(ert-deftest test-org-sgcal/apply-at-point ()
+  "test for apply-at-point"
+  (should (equal
+	   (with-temp-buffer
+	     (org-mode)
+	     (insert "* test headline1\n"
+			     "  :PROPERTIES:\n"
+			     "  :CLIENT-ID: test-client-id\n"
+			     "  :CLIENT-SECRET: test-secret\n"
+			     "  :END:\n"
+			     "\n"
+			     "** test headline2\n"
+			     "   :PROPERTIES:\n"
+			     "   :CALENDAR-ID: teststest@email.com\n"
+			     "   :COLOR-ID: (TODO 2 DONE 3)\n"
+			     "   :END:\n"
+			     "\n"
+			     "*** TODO test headline3\n"
+			     "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+			     "    :PROPERTIES:\n"
+			     "    :ID:       test-id\n"
+			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+			     "    :END:\n"
+			     "abcdefg\n")
+	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+	     (org-previous-visible-heading 1)
+	     (org-sgcal--apply-at-point #'dummy-fun-for-apply-at-point))
+	   '("teststest@email.com"
+	    (concat "new_rreeffrr")
+	    "test-secret" "test-id"
+	    (0 34 12 10 4 2018 nil)
+	    (0 34 13 10 4 2018 nil)
+	    "TODO test headline3" nil "abcdefg\n" 2))))
