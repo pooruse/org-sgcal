@@ -60,6 +60,11 @@ This function will erase current buffer if success."
   (org-sgcal--update-level3-headlines (lambda (&rest argv)
                                         (apply #'org-sgcal-get-event-list argv))))
 
+(defun org-sgcal-post-at-point ()
+  "Post or update events at point"
+  (interactive)
+  
+  )
 
 ;;; http request functions
 (defun org-sgcal-request-authorization (client-id nickname)
@@ -458,29 +463,59 @@ this function will return nil immediately
 2. by side-effect the point will be changed
 according to the search. 
 "
-  (let ((here (org-element-at-point))
-	(newargv argv))
-    (if (eq 'headline (org-element-type here))
+  (if (org-at-heading-p)
+      (let ((here (org-element-at-point))
+	    (newargv argv))
 	(let ((level (org-element-property :level here)))
 	  (cond ((= level 3)
 		 (progn
+		   (setq newargv
+			 (plist-put newargv :name
+				    (substring-no-properties
+				     (org-element-property :title here))))
+		   (setq newargv
+			 (plist-put newargv :todo
+				    (let ((todo-keyword (org-element-property :todo-keyword here)))
+				      (if todo-keyword
+					  (substring-no-properties todo-keyword)
+					nil))))
+		   
 		   (setq newargv (plist-put newargv :id (org-element-property :ID here)))
 		   (setq newargv (plist-put newargv :updated (org-element-property :UPDATED here)))
 		   (outline-up-heading 1)
-		   (org-sgcal--search-up-from-here newargv)))
+		   (org-sgcal--search-up newargv)))
 		((= level 2)
 		 (progn
 		   (setq newargv (plist-put newargv :color-id (org-element-property :COLOR-ID here)))
 		   (setq newargv (plist-put newargv :cid (org-element-property :CALENDAR-ID here)))
 		   (outline-up-heading 1)
-		   (org-sgcal--search-up-from-here newargv)))
+		   (org-sgcal--search-up newargv)))
 		((= level 1)
 		 (progn
 		   (setq newargv (plist-put newargv :client-id (org-element-property :CLIENT-ID here)))
 		   (setq newargv (plist-put newargv :client-secret (org-element-property :CLIENT-SECRET here)))
 		   newargv))
-		(t nil)))
-      nil)))
+		(t nil)))) nil))
+
+(defun org-sgcal--apply-at-point (fun)
+  "apply fun at point
+this function should format like
+ (defun some-fun (title properties-plist))"
+  (save-excursion
+    (when (not (org-at-heading-p))
+      (org-previous-visible-heading 1))
+    (let ((props (org-sgcal--search-up)))
+      (if props
+	  (let ((client-id (plist-get props :client-id))
+		(client-secret (plist-get props :client-secret))
+		(cid (plist-get props :cid))
+		(color-id (plist-get props :color-id))
+		(updated (plist-get props :updated))
+		(id (plist-get props :id)))
+	    (when (and client-id
+		       client-secret
+		       cid)))
+	nil)) nil))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
