@@ -28,6 +28,39 @@ as `decode-time' return"
 		  ,(nth 5 date-time)
 		  nil))))))
 
+(defun return-t (&rest argv) "return t for test" t)
+(defun return-nil (&rest argv) "return nil for test" nil)
+
+(defun dummy-request-token (client-id client-secret nickname)
+  "return dummy token for test"
+  `((access_token . "aacceess")
+    (refresh_token . "rreeffrr")))
+
+(defun dummy-refresh-token (client-id client-secret refresh-token)
+  "return dummy token for test (only access_token"
+  `((access_token . "aacceess")))
+
+(defun dummy-events-list (&rest argv)
+  "return dummy events list for test"
+  '((items . [(
+	       (id . "test")
+	       (description . "Hello word")
+	       (start . ((date . "2018-04-01")))
+	       (end . ((date . "2018-04-02")))
+	       (updated . "2018-01-01T01:02:03Z")
+	       (description . "Hello word")
+	       (summary . "hee"))
+	      (
+	       (id . "test2")
+	       (description . "Poo boo")
+	       (start . ((dateTime . "2018-04-01T08:00:00+0800")))
+	       (end . ((dateTime . "2018-04-02T20:00:00+0800")))
+	       (updated . "2018-01-01T01:02:03Z")
+	       (description . "Hello word")
+	       (summary . "hee"))]))
+  )
+
+
 (ert-deftest test-org-sgcal/create-headline ()
   "test org-sgcal--create-headline can 
 create correct org string"
@@ -295,38 +328,6 @@ replace headline currectly"
   (should (equal (org-sgcal--convert-time-string "2018-04-01T17:00:00Z")
                  "2018-04-01T17:00:00Z")))
 
-(defun dummy-request-token (client-id client-secret nickname)
-  "return dummy token for test"
-  '((access_token . (concat
-		     "aacceess"
-		     client-id
-		     client-secret
-		     nickname))
-    (refresh_token . "rreeffrr")))
-
-(defun dummy-refresh-token (client-id client-secret refresh-token)
-  "return dummy token for test (only access_token"
-  '((access_token . (concat"new_rreeffrr"))))
-
-(defun dummy-events-list (&rest argv)
-  "return dummy events list for test"
-  '((items . [(
-	       (id . "test")
-	       (description . "Hello word")
-	       (start . ((date . "2018-04-01")))
-	       (end . ((date . "2018-04-02")))
-	       (updated . "2018-01-01T01:02:03Z")
-	       (description . "Hello word")
-	       (summary . "hee"))
-	      (
-	       (id . "test2")
-	       (description . "Poo boo")
-	       (start . ((dateTime . "2018-04-01T08:00:00+0800")))
-	       (end . ((dateTime . "2018-04-02T20:00:00+0800")))
-	       (updated . "2018-01-01T01:02:03Z")
-	       (description . "Hello word")
-	       (summary . "hee"))]))
-  )
 
 (ert-deftest test-org-sgcal/token-and-fetch ()
   "test for update-tokens-alist and update-level3-headlines"
@@ -472,8 +473,92 @@ replace headline currectly"
 	     (org-previous-visible-heading 1)
 	     (org-sgcal--apply-at-point #'dummy-fun-for-apply-at-point))
 	   '("teststest@email.com"
-	    (concat "new_rreeffrr")
+	     "aacceess"
 	    "test-secret" "test-id"
 	    (0 34 12 10 4 2018 nil)
 	    (0 34 13 10 4 2018 nil)
 	    "TODO test headline3" nil "abcdefg\n" 2))))
+
+(ert-deftest test-org-sgcal/delete-at-point-and-apply ()
+  "test for delete-at-point-and-apply"
+  (should
+   (equal (with-temp-buffer
+	     (org-mode)
+	     (insert "* test headline1\n"
+			     "  :PROPERTIES:\n"
+			     "  :CLIENT-ID: test-client-id\n"
+			     "  :CLIENT-SECRET: test-secret\n"
+			     "  :END:\n"
+			     "\n"
+			     "** test headline2\n"
+			     "   :PROPERTIES:\n"
+			     "   :CALENDAR-ID: teststest@email.com\n"
+			     "   :COLOR-ID: (TODO 2 DONE 3)\n"
+			     "   :END:\n"
+			     "\n"
+			     "*** TODO test headline3\n"
+			     "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+			     "    :PROPERTIES:\n"
+			     "    :ID:       test-id\n"
+			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+			     "    :END:\n"
+			     "abcdefg\n")
+	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+	     (org-sgcal--delete-at-point-and-apply #'return-nil)
+	     (buffer-string))
+	  (concat "* test headline1\n"
+		  "  :PROPERTIES:\n"
+		  "  :CLIENT-ID: test-client-id\n"
+		  "  :CLIENT-SECRET: test-secret\n"
+		  "  :END:\n"
+		  "\n"
+		  "** test headline2\n"
+		  "   :PROPERTIES:\n"
+		  "   :CALENDAR-ID: teststest@email.com\n"
+		  "   :COLOR-ID: (TODO 2 DONE 3)\n"
+		  "   :END:\n"
+		  "\n"
+		  "*** TODO test headline3\n"
+		  "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+		  "    :PROPERTIES:\n"
+		  "    :ID:       test-id\n"
+		  "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+		  "    :END:\n"
+		  "abcdefg\n")))
+  (should
+   (equal (with-temp-buffer
+	     (org-mode)
+	     (insert "* test headline1\n"
+			     "  :PROPERTIES:\n"
+			     "  :CLIENT-ID: test-client-id\n"
+			     "  :CLIENT-SECRET: test-secret\n"
+			     "  :END:\n"
+			     "\n"
+			     "** test headline2\n"
+			     "   :PROPERTIES:\n"
+			     "   :CALENDAR-ID: teststest@email.com\n"
+			     "   :COLOR-ID: (TODO 2 DONE 3)\n"
+			     "   :END:\n"
+			     "\n"
+			     "*** TODO test headline3\n"
+			     "    DEADLINE: <2018-04-10 二 13:34> SCHEDULED: <2018-04-10 二 12:34>\n"
+			     "    :PROPERTIES:\n"
+			     "    :ID:       test-id\n"
+			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
+			     "    :END:\n"
+			     "abcdefg\n")
+	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+	     (org-sgcal--delete-at-point-and-apply #'return-t)
+	     (buffer-string))
+	  (concat "* test headline1\n"
+		  "  :PROPERTIES:\n"
+		  "  :CLIENT-ID: test-client-id\n"
+		  "  :CLIENT-SECRET: test-secret\n"
+		  "  :END:\n"
+		  "\n"
+		  "** test headline2\n"
+		  "   :PROPERTIES:\n"
+		  "   :CALENDAR-ID: teststest@email.com\n"
+		  "   :COLOR-ID: (TODO 2 DONE 3)\n"
+		  "   :END:\n"
+		  "\n"))))

@@ -573,19 +573,18 @@ this function should format like
 		(funcall fun cid atoken client-secret
 			 eid start end smry nil desc (plist-get color-id (intern todo))))))))))
 
-(defun org-sgcal--delete-at-point-and-apply (fun)
+(defun org-sgcal--delete-at-point-and-apply (delete-request-fun)
   "Delete event at point if available"
   (interactive)
-  
   (when (org-sgcal--apply-at-point (lambda (cid a-token client-secret eid
 						start end smry loc desc color-id)
 				     (when (and cid a-token client-secret eid)
-				       (funcall fun cid a-token client-secret eid))))
+				       (funcall delete-request-fun cid a-token client-secret eid))))
     (when (not (org-at-heading-p))
       (org-previous-visible-heading 1))
-    (let ((here (org-elemene-at-point)))
+    (let ((here (org-element-at-point)))
       (delete-region (org-element-property :begin here)
-		     (org-element-property :begin end)))))
+		     (org-element-property :end here)))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
