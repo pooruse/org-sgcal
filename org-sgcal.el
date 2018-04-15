@@ -41,6 +41,47 @@
   :type 'integer)
 
 (defvar org-sgcal-token-alist nil)
+(defvar org-sgcal-error-string nil)
+
+(defconst org-sgcal-error-plist
+  `(http400 "Request body data format error"
+	    http401 "Access token expired, please run org-sgcal-update-tokens again"
+	    PostErr ,(concat "The minimun requirement of heading is title and :SCHEDULD\n"
+			     "which formats <YY-MM-XX>")
+	    startDateTimeWithoutEnd ,(concat "If your :SCHEDULED in your headind formats <YY-MM-XX> W HH:MM.\n"
+					     "You should add an :DEADLINE to it with same format")
+	    DeleteErr "No events it in properties of this heading"
+	    )
+  "This list contains all error could happend in sgcal")
+
+
+;;; maybe class
+(defun maybe-error (reason)
+  "create a maybe-error class with error code"
+  `(maybe-error . ,reason))
+
+(defun maybe-make (val)
+  "contructor for maybe"
+  `(maybe . ,val))
+
+(defun maybe-get (maybe-val)
+  (plist-get maybe-val 'maybe))
+
+(defun maybe-map (maybe-fun maybe-val)
+  "apply function to data in maybe-val, 
+and package it to maybe"
+  (let ((argv (maybe-get maybe-val)))
+    (if argv 
+	(funcall maybe-fun argv)
+      maybe-val)))
+
+(defun maybe-flatmap (maybe-fun maybe-val)
+  "apply function with argument in maybe-val 
+and return the result"
+  (let ((argv (maybe-get maybe-val)))
+    (if argv 
+	(funcall maybe-fun argv)
+      maybe-val)))
 
 ;;; org-sgcal user functions
 (defun org-sgcal-update-tokens ()
