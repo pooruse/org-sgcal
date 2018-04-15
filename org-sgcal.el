@@ -44,30 +44,50 @@
 (defvar org-sgcal-error-string nil)
 
 (defconst org-sgcal-error-plist
-  `(http400 "Request body data format error"
-	    http401 "Access token expired, please run org-sgcal-update-tokens again"
-	    PostErr ,(concat "The minimun requirement of heading is title and :SCHEDULD\n"
+  `(:httpErr400 "Request body data format error"
+		  :httpErr401 "Access token expired, please run org-sgcal-update-tokens again"
+		  :headingFormatErr ,(concat "The minimun requirement of heading is title and :SCHEDULD\n"
 			     "which formats <YY-MM-XX>")
-	    startDateTimeWithoutEnd ,(concat "If your :SCHEDULED in your headind formats <YY-MM-XX> W HH:MM.\n"
+		  :startDateTimeWithoutEnd ,(concat "If your :SCHEDULED in your headind formats <YY-MM-XX> W HH:MM.\n"
 					     "You should add an :DEADLINE to it with same format")
-	    DeleteErr "No events it in properties of this heading"
-	    )
+		  :deleteErr "No events it in properties of this heading"
+		  :httpErr "Http error code: %s"
+		  :notokenErr "No token available, please run org-sgcal-update-tokens")
   "This list contains all error could happend in sgcal")
 
 
 ;;; maybe class
-(defun maybe-error (reason)
+(defun maybe-error-make (reason)
   "create a maybe-error class with error code"
   `(maybe-error . ,reason))
+
+(defun maybe-error-get (maybe-err)
+  "Get error message from maybe-err"
+  (let ((key (car maybe-err))
+	(val (cdr maybe-err)))
+    (if (eq key 'maybe-error) val nil)))
+
+(defun maybe-error-string (maybe-err)
+  "Translate error simbol to string and show it to user "
+  (cond
+   ((listp err)
+    (apply #'format
+	   (plist-get org-sgcal-error-plist (car err))
+	   (cdr err)))
+   (err (plist-get org-sgcal-error-plist err))
+   (t "Unknown Error Happened")))
 
 (defun maybe-make (val)
   "contructor for maybe"
   `(maybe . ,val))
 
-(defun maybe-get (maybe-val)
-  (plist-get maybe-val 'maybe))
 
-(defun maybe-map (maybe-fun maybe-val)
+(defun maybe-get (maybe-val)
+  (let ((key (car maybe-val))
+	(val (cdr maybe-val)))
+    (if (eq key 'maybe) val nil)))
+
+(defun maybe-map (maybe-val maybe-fun)
   "apply function to data in maybe-val, 
 and package it to maybe"
   (let ((argv (maybe-get maybe-val)))
@@ -75,7 +95,7 @@ and package it to maybe"
 	(funcall maybe-fun argv)
       maybe-val)))
 
-(defun maybe-flatmap (maybe-fun maybe-val)
+(defun maybe-flatmap (maybe-val maybe-fun)
   "apply function with argument in maybe-val 
 and return the result"
   (let ((argv (maybe-get maybe-val)))
@@ -97,19 +117,24 @@ and return the result"
 This function will erase current buffer if success."
   (interactive)
   (org-sgcal--update-level3-headlines (lambda (&rest argv)
-                                        (apply #'org-sgcal-get-event-list argv))))
+					(apply #'org-sgcal-get-event-list argv)))
+  (message "Fetch Finished"))
 
 (defun org-sgcal-post-at-point ()
   "Post or update events at point"
   (interactive)
-  (if (org-sgcal-apply-and-update-at-point #'org-sgcal-post-event)
-      (message "Post Success")))
+  (let ((err (maybe-error-get (org-sgcal-apply-and-update-at-point #'org-sgcal-post-event))))
+    (if err
+	(message (maybe-error-string err))
+      (message "Post Success"))))
 
 (defun org-sgcal-delete-at-point ()
   "Delete event at point if available"
   (interactive)
-  (if (org-sgcal--delete-at-point-and-apply #'org-sgcal-delete-event #'y-or-n-p)
-      (message "Delete Success")))
+  (let ((err (maybe-error-get (org-sgcal--delete-at-point-and-apply #'org-sgcal-delete-event #'y-or-n-p))))
+    (if err
+	(message (maybe-error-string err))
+      (message "Delete Success"))))
 
 
 ;;; http request functions
@@ -214,10 +239,10 @@ It returns the code provided by the service."
      :parser 'org-sgcal--json-read
      :error (cl-function
 	     (lambda (&key error-thrown &allow-other-keys)
-	       (message (format "Get error: %s" error-thrown))))
+	       (setq data (maybe-error-make (:httpErr error-thrown)))))
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
-		 (setq data (request-response-data response)))))
+		 (setq data (maybe-make (request-response-data response))))))
     data))
 
 (defun org-sgcal-delete-event (cid a-token client-secret eid)
@@ -233,10 +258,10 @@ It returns the code provided by the service."
 	       ("grant_type" . "authorization_code"))
      :success (cl-function
 	       (lambda (&key data &allow-other-keys)
-		 (setq out t)))
+		 (setq out (maybe-make t))))
      :error (cl-function
 	     (lambda (&key error-thrown &allow-other-keys)
-	       (message (format "Error code: %s" error-thrown)))))
+	       (setq out (maybe-error-make (:httpErr error-thrown))))))
     out))
 
 
@@ -409,7 +434,6 @@ String to format that `data-to-time' can accept"
 (defun org-sgcal--update-level3-headlines (get-events-fun)
   "Fetch all events according by settings of current buffer.
 This function will erase current buffer if success."
-  (interactive)
   (let ((ele (org-element-parse-buffer)))
     (org-sgcal--headline-map
      2 ele
@@ -618,39 +642,45 @@ this function should format like
 		   (smry (concat (when todo (concat todo " ")) name))
 		   (start-date (if start (convert-time-to-string start)))
 		   (end-date (cond (end (convert-time-to-string end))
+				   ((not start) nil)
 				   ((not (nth 2 start))
 				    (convert-time-to-string
 				     `(nil nil nil ,(1+ (nth 3 start))
 					 ,(nth 4 start)
 					 ,(nth 5 start)
 					 nil))))))
-	      (when (and cid
-			 atoken
-			 client-secret
-			 start
-			 name)
+	      (cond
+	       ((not atoken) (maybe-error-make :notokenErr))
+	       ((and cid
+		     atoken
+		     client-secret
+		     start
+		     name)
 		(funcall
 		 fun cid atoken client-secret
 		 eid start-date end-date
 		 smry nil desc
-		 (if todo (plist-get color-id (intern todo)) nil)))))))))
+		 (if todo (plist-get color-id (intern todo)) nil)))
+	       (t (maybe-error-make :headingFormatErr)))))))))
 
 (defun org-sgcal--delete-at-point-and-apply (delete-request-fun ask-fun)
   "run funtion at point if available. if apply success,
 delete heading at point"
-  (interactive)
-  (when (org-sgcal--apply-at-point (lambda (cid a-token client-secret eid
-						start end smry loc desc color-id)
-				     (if (and cid a-token client-secret eid)
-					 (when (funcall
-						ask-fun
-						(format "Do you really want delete event?\n%s\n" smry))
-					   (funcall delete-request-fun cid a-token client-secret eid)))))
-    (when (not (org-at-heading-p))
-      (org-previous-visible-heading 1))
-    (let ((here (org-element-at-point)))
-      (delete-region (org-element-property :begin here)
-		     (org-element-property :end here)))))
+  (maybe-map
+   (org-sgcal--apply-at-point
+    (lambda (cid a-token client-secret eid
+		 start end smry loc desc color-id)
+      (if (and cid a-token client-secret eid)
+	  (when (funcall
+		 ask-fun
+		 (format "Do you really want delete event?\n%s\n" smry))
+	    (funcall delete-request-fun cid a-token client-secret eid)))))
+   (lambda (head)
+     (when (not (org-at-heading-p))
+       (org-previous-visible-heading 1))
+     (let ((here (org-element-at-point)))
+       (delete-region (org-element-property :begin here)
+		      (org-element-property :end here))))))
 
 (defun convert-time-to-string (date-time)
   "date-time is a list which format is the same
@@ -673,20 +703,20 @@ as `decode-time' return"
 
 (defun org-sgcal-apply-and-update-at-point (post-fun)
   "Apply update heading at point (if success)"
-  (let ((ret (org-sgcal--apply-at-point post-fun)))
-    (if ret
-	(progn (when (not (org-at-heading-p))
-		 (org-previous-visible-heading 1))
-	       (let ((here (org-element-at-point)))
-		 (org-sgcal--replace-element
-		  here (org-sgcal--parse-item ret 3)))
-	       (org-previous-visible-heading 1)
-	       (let ((here (org-element-at-point)))
-		 (if here
-		     (org-indent-region
-		      (org-element-property :begin here)
-		      (org-element-property :end here)))
-		 t)))))
+  (maybe-map
+   (org-sgcal--apply-at-point post-fun)
+   (lambda (ret)
+     (when (not (org-at-heading-p))
+       (org-previous-visible-heading 1))
+     (let ((here (org-element-at-point)))
+       (org-sgcal--replace-element
+	here (org-sgcal--parse-item ret 3)))
+     (org-previous-visible-heading 1)
+     (let ((here (org-element-at-point)))
+       (if here
+	   (org-indent-region
+	    (org-element-property :begin here)
+	    (org-element-property :end here)))))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
