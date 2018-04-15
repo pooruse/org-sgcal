@@ -95,6 +95,13 @@ as `decode-time' return"
 			  (lambda (&rest argv)
 			    (maybe-error-make :testErr))))))
 		 :testErr))
+  (should (equal (with-temp-buffer
+  		   (insert "* My self for test\n"
+  			   "** main-cal\n")
+  		   (org-sgcal-clear-tokens)
+  		   (car (maybe-error-get
+			 (car (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)))))
+  		 :tokenHeadingFormatErr))
   )
 
 (ert-deftest test-org-sgcal/create-headline ()
