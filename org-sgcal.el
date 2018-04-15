@@ -53,8 +53,9 @@
 		:deleteErr "No events it in properties of this heading"
 		:httpErr "Http error code: %s"
 		:notokenErr "No token available, please run org-sgcal-update-tokens"
-		:requestTokenErr "Fail on request token for %s. Error code is %s."
-		:refreshTokenErr "Fail on refresh token for %s. Error code is %s.")
+		:requestTokenErr "Fail on request token for \"%s\". Error code is %s."
+		:refreshTokenErr "Fail on refresh token for \"%s\". Error code is %s."
+		:tokenHeadingFormatErr "Fail because heading \"%s\" did not contain client-id or client-secret")
   "This list contains all error could happend in sgcal")
 
 
@@ -69,7 +70,7 @@
 	(val (cdr maybe-err)))
     (if (eq key 'maybe-error) val nil)))
 
-(defun maybe-error-string (maybe-err)
+(defun maybe-error-string (err)
   "Translate error simbol to string and show it to user "
   (cond
    ((listp err)
@@ -115,9 +116,10 @@ and return the result"
 	      (lambda (&rest argv)
 		(apply #'org-sgcal-refresh-token argv)))))
     (dolist (err err-list)
-      (if err
-	  (message (maybe-error-string err))
-	(message "Update tokens success")))))
+      (let ((err-type (maybe-error-get err)))
+	(if err-type
+	    (message (maybe-error-string err-type))
+	  (message "Update tokens success"))))))
 
 (defun org-sgcal-clear-tokens ()
   "set org-sgcal-token-alist to nil"
@@ -250,7 +252,7 @@ It returns the code provided by the service."
      :parser 'org-sgcal--json-read
      :error (cl-function
 	     (lambda (&key error-thrown &allow-other-keys)
-	       (setq data (maybe-error-make (:httpErr error-thrown)))))
+	       (setq data (maybe-error-make `(:httpErr ,error-thrown)))))
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
 		 (setq data (maybe-make (request-response-data response))))))
@@ -273,7 +275,7 @@ It returns the code provided by the service."
 		     (setq out (maybe-make t))))
 	 :error (cl-function
 		 (lambda (&key error-thrown &allow-other-keys)
-		   (setq out (maybe-error-make (:httpErr error-thrown))))))
+		   (setq out (maybe-error-make `(:httpErr ,error-thrown))))))
 	out)
     (maybe-error-make :deleteErr)))
 
@@ -434,23 +436,27 @@ String to format that `data-to-time' can accept"
     (org-sgcal--headline-map
      1 ele (lambda (h1)
 	     (let ((title (substring-no-properties (car (org-element-property :title h1))))
-		   (client-id (substring-no-properties (org-element-property :CLIENT-ID h1)))
-		   (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
-               (let ((account (assq (intern title) org-sgcal-token-alist)))
-                 (if account
-                     (let*  ((rtoken (cdr (assq 'refresh_token account)))
-			     (refresh-ret
-			      (funcall refresh-fun client-id client-secret rtoken title)))
-		       (maybe-map refresh-ret
-				  (lambda (res)
-				    (setcdr (assq 'access_token account)
-					    (cdr (assq 'access_token res))))))
-		   (let ((request-ret (funcall request-fun client-id client-secret title)))
-		     (maybe-map request-ret
-				(lambda (res)
-				  (add-to-list 'org-sgcal-token-alist
-					       `(,(intern title) .
-						 ,res))))))))))))
+		   (_client-id (org-element-property :CLIENT-ID h1))
+		   (_client-secret (org-element-property :CLIENT-SECRET h1)))
+	       (if (and _client-id _client-secret)
+		   (let ((account (assq (intern title) org-sgcal-token-alist))
+			 (client-id (substring-no-properties _client-id))
+			 (client-secret (substring-no-properties _client-secret)))
+		     (if account
+			 (let*  ((rtoken (cdr (assq 'refresh_token account)))
+				 (refresh-ret
+				  (funcall refresh-fun client-id client-secret rtoken title)))
+			   (maybe-map refresh-ret
+				      (lambda (res)
+					(setcdr (assq 'access_token account)
+						(cdr (assq 'access_token res))))))
+		       (let ((request-ret (funcall request-fun client-id client-secret title)))
+			 (maybe-map request-ret
+				    (lambda (res)
+				      (add-to-list 'org-sgcal-token-alist
+						   `(,(intern title) .
+						     ,res)))))))
+		 (maybe-error-make `(:tokenHeadingFormatErr ,title))))))))
 
 (defun org-sgcal--update-level3-headlines (get-events-fun)
   "Fetch all events according by settings of current buffer.
