@@ -400,16 +400,14 @@ contents is org struct text below property drawer
   "recursive type of org-element-map"
   (if (= level 0)
       (apply fun (reverse argv))
-    (progn
-      (org-element-map data
-	  'headline (lambda (h)
-		      (let ((ret
-			     (org-sgcal--headline-map
-			      (1- level)
-			      (org-element-contents h)
-			      fun
-			      (cons h argv))))))
-	  nil nil 'headline))))
+    (org-element-map data
+	'headline (lambda (h)
+		    (org-sgcal--headline-map
+		     (1- level)
+		     (org-element-contents h)
+		     fun
+		     (cons h argv)))
+	nil nil 'headline)))
 
 (defun org-sgcal--parse-item (item level)
   "parse json object from google api"
