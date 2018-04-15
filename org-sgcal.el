@@ -109,14 +109,15 @@ and return the result"
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
-  (let ((err (org-sgcal--update-token-alist
+  (let ((err-list (org-sgcal--update-token-alist
 	      (lambda (&rest argv)
 		(apply #'org-sgcal-request-token argv))
 	      (lambda (&rest argv)
 		(apply #'org-sgcal-refresh-token argv)))))
-    (if err
-	(message (maybe-error-string err))
-      (message "Update tokens success"))))
+    (dolist (err err-list)
+      (if err
+	  (message (maybe-error-string err))
+	(message "Update tokens success")))))
 
 (defun org-sgcal-clear-tokens ()
   "set org-sgcal-token-alist to nil"
