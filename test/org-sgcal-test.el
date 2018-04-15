@@ -35,12 +35,12 @@ as `decode-time' return"
 
 (defun dummy-request-token (client-id client-secret nickname)
   "return dummy token for test"
-  `((access_token . "aacceess")
-    (refresh_token . "rreeffrr")))
+  (maybe-make `((access_token . "aacceess")
+		(refresh_token . "rreeffrr"))))
 
-(defun dummy-refresh-token (client-id client-secret refresh-token)
+(defun dummy-refresh-token (client-id client-secret refresh-token nickname)
   "return dummy token for test (only access_token"
-  `((access_token . "aacceess")))
+  (maybe-make `((access_token . "aacceess"))))
 
 (defun dummy-events-list (&rest argv)
   "return dummy events list for test"
@@ -59,9 +59,43 @@ as `decode-time' return"
 	       (end . ((dateTime . "2018-04-02T20:00:00+0800")))
 	       (updated . "2018-01-01T01:02:03Z")
 	       (description . "Hello word")
-	       (summary . "hee"))]))
-  )
+	       (summary . "hee"))])))
 
+(ert-deftest test-org-sgcal/update-token-error ()
+  (should (equal (with-temp-buffer
+  		   (insert "* My self for test\n"
+  			   "  :PROPERTIES:\n"
+  			   "  :CLIENT-ID: test-client-id\n"
+  			   "  :CLIENT-SECRET: test-client-secret\n"
+  			   "  :END:\n"
+  			   "** main-cal\n"
+  			   "   :PROPERTIES:\n"
+  			   "   :CALENDAR-ID: test_cid\n"
+  			   "   :END:\n")
+  		   (org-sgcal-clear-tokens)
+  		   (maybe-error-get
+  		    (car (org-sgcal--update-token-alist (lambda (&rest argv)
+  							  (maybe-error-make :testErr)
+  							  ) #'dummy-refresh-token))))
+  		 :testErr))
+  (should (equal (with-temp-buffer
+		   (insert "* My self for test\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** main-cal\n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
+		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+		   (maybe-error-get
+		    (car (org-sgcal--update-token-alist
+			  #'dummy-request-token
+			  (lambda (&rest argv)
+			    (maybe-error-make :testErr))))))
+		 :testErr))
+  )
 
 (ert-deftest test-org-sgcal/create-headline ()
   "test org-sgcal--create-headline can 

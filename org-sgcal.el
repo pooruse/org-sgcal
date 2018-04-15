@@ -45,14 +45,16 @@
 
 (defconst org-sgcal-error-plist
   `(:httpErr400 "Request body data format error"
-		  :httpErr401 "Access token expired, please run org-sgcal-update-tokens again"
-		  :headingFormatErr ,(concat "The minimun requirement of heading is title and :SCHEDULD\n"
-			     "which formats <YY-MM-XX>")
-		  :startDateTimeWithoutEnd ,(concat "If your :SCHEDULED in your headind formats <YY-MM-XX> W HH:MM.\n"
-					     "You should add an :DEADLINE to it with same format")
-		  :deleteErr "No events it in properties of this heading"
-		  :httpErr "Http error code: %s"
-		  :notokenErr "No token available, please run org-sgcal-update-tokens")
+		:httpErr401 "Access token expired, please run org-sgcal-update-tokens again"
+		:headingFormatErr ,(concat "The minimun requirement of heading is title and :SCHEDULD\n"
+					   "which formats <YY-MM-XX>")
+		:startDateTimeWithoutEnd ,(concat "If your :SCHEDULED in your headind formats <YY-MM-XX> W HH:MM.\n"
+						  "You should add an :DEADLINE to it with same format")
+		:deleteErr "No events it in properties of this heading"
+		:httpErr "Http error code: %s"
+		:notokenErr "No token available, please run org-sgcal-update-tokens"
+		:requestTokenErr "Fail on request token for %s. Error code is %s."
+		:refreshTokenErr "Fail on refresh token for %s. Error code is %s.")
   "This list contains all error could happend in sgcal")
 
 
@@ -107,10 +109,18 @@ and return the result"
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
-  (org-sgcal--update-token-alist (lambda (&rest argv)
-                                   (apply #'org-sgcal-request-token argv))
-                                 (lambda (&rest argv)
-                                   (apply #'org-sgcal-refresh-token argv))))
+  (let ((err (org-sgcal--update-token-alist
+	      (lambda (&rest argv)
+		(apply #'org-sgcal-request-token argv))
+	      (lambda (&rest argv)
+		(apply #'org-sgcal-refresh-token argv)))))
+    (if err
+	(message (maybe-error-string err))
+      (message "Update tokens success"))))
+
+(defun org-sgcal-clear-tokens ()
+  "set org-sgcal-token-alist to nil"
+  (setq org-sgcal-token-alist nil))
 
 (defun org-sgcal-fetch-all ()
   "Fetch all events according by settings of current buffer.
@@ -126,7 +136,7 @@ This function will erase current buffer if success."
   (let ((err (maybe-error-get (org-sgcal-apply-and-update-at-point #'org-sgcal-post-event))))
     (if err
 	(message (maybe-error-string err))
-      (message "Post Success"))))
+      (message "Post success"))))
 
 (defun org-sgcal-delete-at-point ()
   "Delete event at point if available"
@@ -166,13 +176,13 @@ It returns the code provided by the service."
      :parser 'org-sgcal--json-read
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
-		 (setq data (request-response-data response))))
+		 (setq data (maybe-make (request-response-data response)))))
      :error
      (cl-function (lambda (&key error-thrown &allow-other-keys)
-		    (message (format "Error code: %s" error-thrown)))))
+		    (setq data (maybe-error-make (:requestTokenErr nickname error-thrown))))))
     data))
 
-(defun org-sgcal-refresh-token (client-id client-secret refresh-token)
+(defun org-sgcal-refresh-token (client-id client-secret refresh-token nickname)
   "refresh google api auth 2 token"
   (let (data)
     (request
@@ -186,10 +196,10 @@ It returns the code provided by the service."
      :parser 'org-sgcal--json-read
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
-		 (setq data (request-response-data response))))
+		 (setq data (maybe-make (request-response-data response)))))
      :error
      (cl-function (lambda (&key error-thrown &allow-other-keys)
-		    (message (format "Error code: %s" error-thrown)))))
+		    (setq data (maybe-error-make (:refreshTokenErr nickname error-thrown))))))
     data))
 
 (defun org-sgcal-get-event-list (cid a-token client-secret min max)
@@ -247,22 +257,24 @@ It returns the code provided by the service."
 
 (defun org-sgcal-delete-event (cid a-token client-secret eid)
   "delete specify event from calendar"
-  (let (out)
-    (request
-     (concat (org-sgcal--get-events-url cid) "/" eid)
-     :sync t
-     :type "DELETE"
-     :headers '(("Content-Type" . "application/json"))
-     :params `(("access_token" . ,a-token)
-	       ("key" . ,client-secret)
-	       ("grant_type" . "authorization_code"))
-     :success (cl-function
-	       (lambda (&key data &allow-other-keys)
-		 (setq out (maybe-make t))))
-     :error (cl-function
-	     (lambda (&key error-thrown &allow-other-keys)
-	       (setq out (maybe-error-make (:httpErr error-thrown))))))
-    out))
+  (if eid
+      (let (out)
+	(request
+	 (concat (org-sgcal--get-events-url cid) "/" eid)
+	 :sync t
+	 :type "DELETE"
+	 :headers '(("Content-Type" . "application/json"))
+	 :params `(("access_token" . ,a-token)
+		   ("key" . ,client-secret)
+		   ("grant_type" . "authorization_code"))
+	 :success (cl-function
+		   (lambda (&key data &allow-other-keys)
+		     (setq out (maybe-make t))))
+	 :error (cl-function
+		 (lambda (&key error-thrown &allow-other-keys)
+		   (setq out (maybe-error-make (:httpErr error-thrown))))))
+	out)
+    (maybe-error-make :deleteErr)))
 
 
 ;;; internal functions (testable)
@@ -425,11 +437,19 @@ String to format that `data-to-time' can accept"
 		   (client-secret (substring-no-properties (org-element-property :CLIENT-SECRET h1))))
                (let ((account (assq (intern title) org-sgcal-token-alist)))
                  (if account
-                     (let ((rtoken (cdr (assq 'refresh_token account))))
-                       (setcdr (assq 'access_token account)
-			       (cdr (assq 'access_token (funcall refresh-fun client-id client-secret rtoken)))))
-                   (add-to-list 'org-sgcal-token-alist
-				`(,(intern title) . ,(funcall request-fun client-id client-secret title))))))))))
+                     (let*  ((rtoken (cdr (assq 'refresh_token account)))
+			     (refresh-ret
+			      (funcall refresh-fun client-id client-secret rtoken title)))
+		       (maybe-map refresh-ret
+				  (lambda (res)
+				    (setcdr (assq 'access_token account)
+					    (cdr (assq 'access_token res))))))
+		   (let ((request-ret (funcall request-fun client-id client-secret title)))
+		     (maybe-map request-ret
+				(lambda (res)
+				  (add-to-list 'org-sgcal-token-alist
+					       `(,(intern title) .
+						 ,res))))))))))))
 
 (defun org-sgcal--update-level3-headlines (get-events-fun)
   "Fetch all events according by settings of current buffer.
