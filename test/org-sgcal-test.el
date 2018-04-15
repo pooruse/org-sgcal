@@ -788,3 +788,10 @@ replace headline currectly"
 	     (maybe-error-get (org-sgcal-apply-and-update-at-point #'dummy-post-event)))
 	  
 	  :headingFormatErr)))
+
+(ert-deftest test-org-sgcal/maybe-error-flatten ()
+  "test for maybe-error-flatten"
+  (should
+   (equal (format "%s" (maybe-error-flatten '(((maybe-error . a) (maybe-error . b)) (maybe-error . c))))
+	  (format "%s" '((maybe-error . c) (maybe-error . b) (maybe-error . a))))))
+

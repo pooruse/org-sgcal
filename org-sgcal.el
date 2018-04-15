@@ -81,7 +81,7 @@
    (err (plist-get org-sgcal-error-plist err))
    (t "Unknown Error Happened")))
 
-(defun maybe-error-flatten (err-nested-list)
+(defun maybe-error-flatten (var)
   "Flatten nested maybe-error list,
 For example '(((maybe-error a) (maybe-error b)) (maybe-error c)))
 will become '((maybe-error a) (maybe-error b) (maybe-error c)))"
