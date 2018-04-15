@@ -55,7 +55,8 @@
 		:notokenErr "No token available, please run org-sgcal-update-tokens"
 		:requestTokenErr "Fail on request token for \"%s\". Error code is %s."
 		:refreshTokenErr "Fail on refresh token for \"%s\". Error code is %s."
-		:tokenHeadingFormatErr "Fail because heading \"%s\" did not contain client-id or client-secret")
+		:tokenHeadingFormatErr "Fail because heading \"%s\" did not contain client-id or client-secret"
+		:fetchAllErr "Can't find access token for \"%s\".")
   "This list contains all error could happend in sgcal")
 
 
@@ -80,26 +81,42 @@
    (err (plist-get org-sgcal-error-plist err))
    (t "Unknown Error Happened")))
 
+(defun maybe-error-flatten (err-nested-list)
+  "Flatten nested maybe-error list,
+For example '(((maybe-error a) (maybe-error b)) (maybe-error c)))
+will become '((maybe-error a) (maybe-error b) (maybe-error c)))"
+  (let ((tmp))
+    (letrec ((_flatten
+	      (lambda (_var)
+		(cond ((eq (car _var) 'maybe-error) (setq tmp (cons _var tmp)))
+		      ((consp (car _var)) 
+		       (progn (funcall _flatten (car _var))
+			      (funcall _flatten (cdr _var)))))
+		)))
+      (funcall _flatten var))
+  tmp))
+
 (defun maybe-make (val)
   "contructor for maybe"
   `(maybe . ,val))
 
 
 (defun maybe-get (maybe-val)
+  "get value in maybe"
   (let ((key (car maybe-val))
 	(val (cdr maybe-val)))
     (if (eq key 'maybe) val nil)))
 
 (defun maybe-map (maybe-val maybe-fun)
-  "apply function to data in maybe-val, 
+  "apply function with maybe-val, 
 and package it to maybe"
   (let ((argv (maybe-get maybe-val)))
     (if argv 
-	(funcall maybe-fun argv)
+	(maybe-make (funcall maybe-fun argv))
       maybe-val)))
 
 (defun maybe-flatmap (maybe-val maybe-fun)
-  "apply function with argument in maybe-val 
+  "apply function with maybe-val 
 and return the result"
   (let ((argv (maybe-get maybe-val)))
     (if argv 
@@ -129,9 +146,13 @@ and return the result"
   "Fetch all events according by settings of current buffer.
 This function will erase current buffer if success."
   (interactive)
-  (org-sgcal--update-level3-headlines (lambda (&rest argv)
-					(apply #'org-sgcal-get-event-list argv)))
-  (message "Fetch Finished"))
+  (let ((err-list (org-sgcal--update-level3-headlines (lambda (&rest argv)
+							(apply #'org-sgcal-get-event-list argv)))))
+    (dolist (err (maybe-error-flatten err-list))
+      (let ((err-type (maybe-error-get err)))
+	(if err-type
+	    (message (maybe-error-string err-type))
+	  (message "fetch all success"))))))
 
 (defun org-sgcal-post-at-point ()
   "Post or update events at point"
@@ -149,6 +170,12 @@ This function will erase current buffer if success."
 	(message (maybe-error-string err))
       (message "Delete Success"))))
 
+(defun org-sgcal-update-by-tag ()
+  "You can tag each head to :update: to update it or
+ :delete: to delete it"
+  (interactive)
+  
+  )
 
 ;;; http request functions
 (defun org-sgcal-request-authorization (client-id nickname)
@@ -222,10 +249,10 @@ It returns the code provided by the service."
      :parser 'org-sgcal--json-read
      :success (cl-function
 	       (lambda (&key response &allow-other-keys)
-		 (setq data (request-response-data response))))
+		 (setq data (maybe-make (request-response-data response)))))
      :error
      (cl-function (lambda (&key error-thrown &allow-other-keys)
-		    (message (format "Error code: %s" error-thrown)))))
+		    (setq data (mabe-error `(:httpErr ,error-thrown))))))
     data))
 
 (defun org-sgcal-post-event (cid a-token client-secret eid
@@ -373,11 +400,16 @@ contents is org struct text below property drawer
   "recursive type of org-element-map"
   (if (= level 0)
       (apply fun (reverse argv))
-    (org-element-map data
-	'headline (lambda (h)
-		    (org-sgcal--headline-map
-		     (1- level) (org-element-contents h) fun (cons h argv)))
-	nil nil 'headline)))
+    (progn
+      (org-element-map data
+	  'headline (lambda (h)
+		      (let ((ret
+			     (org-sgcal--headline-map
+			      (1- level)
+			      (org-element-contents h)
+			      fun
+			      (cons h argv))))))
+	  nil nil 'headline))))
 
 (defun org-sgcal--parse-item (item level)
   "parse json object from google api"
@@ -446,7 +478,7 @@ String to format that `data-to-time' can accept"
 			 (let*  ((rtoken (cdr (assq 'refresh_token account)))
 				 (refresh-ret
 				  (funcall refresh-fun client-id client-secret rtoken title)))
-			   (maybe-map refresh-ret
+			   (maybe-flatmap refresh-ret
 				      (lambda (res)
 					(setcdr (assq 'access_token account)
 						(cdr (assq 'access_token res))))))
@@ -455,47 +487,57 @@ String to format that `data-to-time' can accept"
 				    (lambda (res)
 				      (add-to-list 'org-sgcal-token-alist
 						   `(,(intern title) .
-						     ,res)))))))
+						     ,res))
+				      res)))))
 		 (maybe-error-make `(:tokenHeadingFormatErr ,title))))))))
 
 (defun org-sgcal--update-level3-headlines (get-events-fun)
   "Fetch all events according by settings of current buffer.
 This function will erase current buffer if success."
   (let ((ele (org-element-parse-buffer)))
-    (org-sgcal--headline-map
-     2 ele
-     (lambda (h1 h2)
-       (let ((title (substring-no-properties (car (org-element-property :title h1))))
-	     (client-id (org-element-property :CLIENT-ID h1))
-	     (client-secret (org-element-property :CLIENT-SECRET h1)))
-         (let ((account (assq (intern title) org-sgcal-token-alist)))
-           (if account
-               (let* ((acount-data (cdr account))
-                      (atoken (cdr (assq 'access_token acount-data))))
-                 (let ((name (car (org-element-property :title h2)))
-		       (cid (org-element-property :CALENDAR-ID h2))
-                       (max (convert-time-to-string
-			     (decode-time
-			      (time-add
-			       (current-time)
-			       (days-to-time org-sgcal-up-days)))))
-                       (min (convert-time-to-string
-                             (decode-time
-			      (time-subtract
-			       (current-time)
-			       (days-to-time org-sgcal-down-days)))))
-                       (new_h2))
-                   (setq new_h2 (org-sgcal--create-headline `(,name 2 nil)
-                                                           `(("CALENDAR-ID" . ,cid))))
-		   (setq new_h2 (apply #'org-element-adopt-elements
-                                 new_h2 (org-sgcal--parse-event-list
-                                         (funcall get-events-fun cid atoken client-secret min max) 3)))
-                   
-                   (org-element-extract-element h2)
-                   (setq h1 (org-element-adopt-elements h1 new_h2)))
-                 (org-sgcal--replace-element h1 h1)
-		 (org-indent-region (point-min) (point-max)))
-             (message (concat " Can't find access-token for " title)))))))))
+    (let ((res-list 
+	   (org-sgcal--headline-map
+	    2 ele
+	    (lambda (h1 h2)
+	      (let ((title (substring-no-properties (car (org-element-property :title h1))))
+		    (client-id (org-element-property :CLIENT-ID h1))
+		    (client-secret (org-element-property :CLIENT-SECRET h1)))
+		(let ((account (assq (intern title) org-sgcal-token-alist)))
+		  (if account
+		      (let* ((acount-data (cdr account))
+			     (atoken (cdr (assq 'access_token acount-data))))
+			(let ((name (car (org-element-property :title h2)))
+			      (cid (org-element-property :CALENDAR-ID h2))
+			      (max (convert-time-to-string
+				    (decode-time
+				     (time-add
+				      (current-time)
+				      (days-to-time org-sgcal-up-days)))))
+			      (min (convert-time-to-string
+				    (decode-time
+				     (time-subtract
+				      (current-time)
+				      (days-to-time org-sgcal-down-days)))))
+			      (new_h2))
+			  (maybe-map (funcall get-events-fun cid atoken client-secret min max)
+				     (lambda (res)
+				       (setq new_h2
+					     (org-sgcal--create-headline
+					      `(,name 2 nil)
+					      `(("CALENDAR-ID" . ,cid))))
+				       (setq new_h2
+					     (apply #'org-element-adopt-elements
+						    new_h2
+						    (org-sgcal--parse-event-list
+						     res 3)))
+				       (org-element-extract-element h2)
+				       (setq h1 (org-element-adopt-elements h1 new_h2))
+				       res))))
+		    (maybe-error-make `(:fetchAllErr ,title)))))))))
+      (erase-buffer)
+      (insert (org-element-interpret-data ele))
+      (org-indent-region (point-min) (point-max))
+      res-list)))
 
 (defun org-sgcal--search-up (&optional argv)
   "this function will search property's and return it as plist
@@ -693,7 +735,7 @@ this function should format like
 (defun org-sgcal--delete-at-point-and-apply (delete-request-fun ask-fun)
   "run funtion at point if available. if apply success,
 delete heading at point"
-  (maybe-map
+  (maybe-flatmap
    (org-sgcal--apply-at-point
     (lambda (cid a-token client-secret eid
 		 start end smry loc desc color-id)
@@ -730,7 +772,7 @@ as `decode-time' return"
 
 (defun org-sgcal-apply-and-update-at-point (post-fun)
   "Apply update heading at point (if success)"
-  (maybe-map
+  (maybe-flatmap
    (org-sgcal--apply-at-point post-fun)
    (lambda (ret)
      (when (not (org-at-heading-p))

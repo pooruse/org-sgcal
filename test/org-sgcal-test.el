@@ -1,7 +1,7 @@
 (defun test-org-element ()
   "print current buffer org struct in *scratch"
   (interactive)
-  (let ((ele (org-element-at-point)))
+  (let ((ele (org-element-parse-buffer)))
     (test-helper ele)))
 
 (defun test-helper (ele)
@@ -44,22 +44,22 @@ as `decode-time' return"
 
 (defun dummy-events-list (&rest argv)
   "return dummy events list for test"
-  '((items . [(
-	       (id . "test")
-	       (description . "Hello word")
-	       (start . ((date . "2018-04-01")))
-	       (end . ((date . "2018-04-02")))
-	       (updated . "2018-01-01T01:02:03Z")
-	       (description . "Hello word")
-	       (summary . "hee"))
-	      (
-	       (id . "test2")
-	       (description . "Poo boo")
-	       (start . ((dateTime . "2018-04-01T08:00:00+0800")))
-	       (end . ((dateTime . "2018-04-02T20:00:00+0800")))
-	       (updated . "2018-01-01T01:02:03Z")
-	       (description . "Hello word")
-	       (summary . "hee"))])))
+  (maybe-make '((items . [(
+			  (id . "test")
+			  (description . "Hello word")
+			  (start . ((date . "2018-04-01")))
+			  (end . ((date . "2018-04-02")))
+			  (updated . "2018-01-01T01:02:03Z")
+			  (description . "Hello word")
+			  (summary . "hee"))
+			 (
+			  (id . "test2")
+			  (description . "Poo boo")
+			  (start . ((dateTime . "2018-04-01T08:00:00+0800")))
+			  (end . ((dateTime . "2018-04-02T20:00:00+0800")))
+			  (updated . "2018-01-01T01:02:03Z")
+			  (description . "Hello word")
+			  (summary . "hee"))]))))
 
 (ert-deftest test-org-sgcal/update-token-error ()
   (should (equal (with-temp-buffer
@@ -101,8 +101,7 @@ as `decode-time' return"
   		   (org-sgcal-clear-tokens)
   		   (car (maybe-error-get
 			 (car (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)))))
-  		 :tokenHeadingFormatErr))
-  )
+  		 :tokenHeadingFormatErr)))
 
 (ert-deftest test-org-sgcal/create-headline ()
   "test org-sgcal--create-headline can 
