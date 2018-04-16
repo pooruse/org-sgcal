@@ -569,7 +569,7 @@ Example 1
 
 ** head2
 :PROPERTIES:
-:COLOR-ID: test-color-id
+:COLOR-ID: (TODO 1 DONE 2)
 :CALENDAR-ID: test-cid
 :END:
 
@@ -584,7 +584,7 @@ returns
  (:name head3 :id test-id :updated test-updated 
  :start (nil 0 17 28 2 2018 nil)
  :end (nil 0 18 28 2 2018 nil)
- :color-id test-color-id :cid test-cid
+ :color-id (TODO 1 DONE 2)
  :title head1
  :client-secret test-client-secret
  :client-id test-client-id)
@@ -794,7 +794,6 @@ as `decode-time' return"
 	    (org-element-property :begin here)
 	    (org-element-property :end here))))
      ret)))
-
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
