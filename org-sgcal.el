@@ -158,7 +158,7 @@ This function will erase current buffer if success."
 (defun org-sgcal-post-at-point ()
   "Post or update events at point"
   (interactive)
-  (let ((err (maybe-error-get (org-sgcal-apply-and-update-at-point #'org-sgcal-post-event))))
+  (let ((err (maybe-error-get (org-sgcal--apply-and-update-at-point #'org-sgcal-post-event))))
     (if err
 	(message (maybe-error-string err))
       (message "Post success"))))
@@ -770,7 +770,7 @@ as `decode-time' return"
 		  ,(nth 5 date-time)
 		  nil))))))
 
-(defun org-sgcal-apply-and-update-at-point (post-fun)
+(defun org-sgcal--apply-and-update-at-point (post-fun)
   "Apply update heading at point (if success)"
   (maybe-map
    (org-sgcal--apply-at-point post-fun)
@@ -787,6 +787,7 @@ as `decode-time' return"
 	    (org-element-property :begin here)
 	    (org-element-property :end here))))
      ret)))
+
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here

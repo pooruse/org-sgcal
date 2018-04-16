@@ -720,7 +720,7 @@ replace headline currectly"
 			     "    :END:\n"
 			     "abcdefg\n")
 	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
-	     (org-sgcal-apply-and-update-at-point #'dummy-post-event)
+	     (org-sgcal--apply-and-update-at-point #'dummy-post-event)
 	     (buffer-string))
 	  
 	  (concat "* test headline1\n"
@@ -764,7 +764,7 @@ replace headline currectly"
 			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
 			     "    :END:\n"
 			     "abcdefg\n")
-	     (maybe-error-get (org-sgcal-apply-and-update-at-point #'dummy-post-event)))
+	     (maybe-error-get (org-sgcal--apply-and-update-at-point #'dummy-post-event)))
 	  
 	  :notokenErr))
   (should
@@ -785,7 +785,7 @@ replace headline currectly"
 			     "*** TODO test headline3\n"
 			     "abcdefg\n")
 	     (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
-	     (maybe-error-get (org-sgcal-apply-and-update-at-point #'dummy-post-event)))
+	     (maybe-error-get (org-sgcal--apply-and-update-at-point #'dummy-post-event)))
 	  
 	  :headingFormatErr)))
 
