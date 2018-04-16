@@ -793,5 +793,5 @@ replace headline currectly"
   "test for maybe-error-flatten"
   (should
    (equal (format "%s" (maybe-error-flatten '(((maybe-error . a) (maybe-error . b)) (maybe-error . c))))
-	  (format "%s" '((maybe-error . c) (maybe-error . b) (maybe-error . a))))))
+	  (format "%s" '((maybe-error . a) (maybe-error . b) (maybe-error . c))))))
 
