@@ -477,7 +477,7 @@ String to format that `data-to-time' can accept"
 			 (let*  ((rtoken (cdr (assq 'refresh_token account)))
 				 (refresh-ret
 				  (funcall refresh-fun client-id client-secret rtoken title)))
-			   (maybe-flatmap refresh-ret
+			   (maybe-map refresh-ret
 				      (lambda (res)
 					(setcdr (assq 'access_token account)
 						(cdr (assq 'access_token res))))))
