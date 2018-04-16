@@ -101,7 +101,24 @@ as `decode-time' return"
   		   (org-sgcal-clear-tokens)
   		   (car (maybe-error-get
 			 (car (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)))))
-  		 :tokenHeadingFormatErr)))
+  		 :tokenHeadingFormatErr))
+  (should (equal (with-temp-buffer
+  		   (insert "* \n"
+  			   "  :PROPERTIES:\n"
+  			   "  :CLIENT-ID: test-client-id\n"
+  			   "  :CLIENT-SECRET: test-client-secret\n"
+  			   "  :END:\n"
+  			   "** main-cal\n"
+  			   "   :PROPERTIES:\n"
+  			   "   :CALENDAR-ID: test_cid\n"
+  			   "   :END:\n")
+  		   (org-sgcal-clear-tokens)
+  		   (maybe-error-get
+  		    (car (org-sgcal--update-token-alist (lambda (&rest argv)
+  							  (maybe-error-make :testErr)
+  							  ) #'dummy-refresh-token))))
+  		 :noApiHeadingErr))
+  )
 
 (ert-deftest test-org-sgcal/create-headline ()
   "test org-sgcal--create-headline can 
@@ -408,7 +425,23 @@ replace headline currectly"
 			 "   :ID:       test2\n"
 			 "   :UPDATED:  2018-01-01T01:02:03Z\n"
 			 "   :END:\n"
-			 "   Poo boo\n"))))
+			 "   Poo boo\n")))
+  (should (equal (with-temp-buffer
+		   (insert "* My self for test\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** \n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
+		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+		   (maybe-error-get
+		    (car
+		     (maybe-error-flatten (org-sgcal--update-level3-headlines #'dummy-events-list)))))
+		 :noCalHeadingErr))
+  )
 
 
 (ert-deftest test-org-sgcal/search-up ()
