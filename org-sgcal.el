@@ -56,7 +56,8 @@
 		:requestTokenErr "Fail on request token for \"%s\". Error code is %s."
 		:refreshTokenErr "Fail on refresh token for \"%s\". Error code is %s."
 		:tokenHeadingFormatErr "Fail because heading \"%s\" did not contain client-id or client-secret"
-		:fetchAllErr "Can't find access token for \"%s\".")
+		:fetchAllErr "Can't find access token for \"%s\"."
+                :applyAtPointErr "Point is not on any heading.")
   "This list contains all error could happend in sgcal")
 
 
@@ -687,48 +688,49 @@ according to the search.
   "apply fun at point
 this function should format like
  (defun some-fun (title properties-plist))"
-  (save-excursion
-    (when (not (org-at-heading-p))
-      (org-previous-visible-heading 1))
-    (let ((props (org-sgcal--search-up)))
-      (when props
-	  (let ((name (plist-get props :name))
-		(todo (plist-get props :todo))
-		(start (plist-get props :start))
-		(end (plist-get props :end))
-		(desc (plist-get props :contents))
-		(eid (plist-get props :id))
-		(updated (plist-get props :updated))
-		(cid (plist-get props :cid))
-		(color-id (plist-get props :color-id))
-		(client-secret (plist-get props :client-secret))
-		(title (plist-get props :title)))
-	    
-	    (let* ((account (assq (intern title) org-sgcal-token-alist))
-		   (atoken (cdr (assq 'access_token account)))
-		   (smry (concat (when todo (concat todo " ")) name))
-		   (start-date (if start (convert-time-to-string start)))
-		   (end-date (cond (end (convert-time-to-string end))
-				   ((not start) nil)
-				   ((not (nth 2 start))
-				    (convert-time-to-string
-				     `(nil nil nil ,(1+ (nth 3 start))
+  (let ((props (save-excursion
+                 (when (not (org-at-heading-p))
+                   (org-previous-visible-heading 1))
+                 (org-sgcal--search-up))))
+    (if props
+        (let ((name (plist-get props :name))
+              (todo (plist-get props :todo))
+              (start (plist-get props :start))
+              (end (plist-get props :end))
+              (desc (plist-get props :contents))
+              (eid (plist-get props :id))
+              (updated (plist-get props :updated))
+              (cid (plist-get props :cid))
+              (color-id (plist-get props :color-id))
+              (client-secret (plist-get props :client-secret))
+              (title (plist-get props :title)))
+          
+          (let* ((account (assq (intern title) org-sgcal-token-alist))
+                 (atoken (cdr (assq 'access_token account)))
+                 (smry (concat (when todo (concat todo " ")) name))
+                 (start-date (if start (convert-time-to-string start)))
+                 (end-date (cond (end (convert-time-to-string end))
+                                 ((not start) nil)
+                                 ((not (nth 2 start))
+                                  (convert-time-to-string
+                                   `(nil nil nil ,(1+ (nth 3 start))
 					 ,(nth 4 start)
 					 ,(nth 5 start)
 					 nil))))))
-	      (cond
-	       ((not atoken) (maybe-error-make :notokenErr))
-	       ((and cid
-		     atoken
-		     client-secret
-		     start
-		     name)
-		(funcall
-		 fun cid atoken client-secret
-		 eid start-date end-date
-		 smry nil desc
-		 (if todo (plist-get color-id (intern todo)) nil)))
-	       (t (maybe-error-make :headingFormatErr)))))))))
+            (cond
+             ((not atoken) (maybe-error-make :notokenErr))
+             ((and cid
+                   atoken
+                   client-secret
+                   start
+                   name)
+              (funcall
+               fun cid atoken client-secret
+               eid start-date end-date
+               smry nil desc
+               (if todo (plist-get color-id (intern todo)) nil)))
+             (t (maybe-error-make :headingFormatErr)))))
+      (maybe-error-make :applyAtPointErr))))
 
 (defun org-sgcal--delete-at-point-and-apply (delete-request-fun ask-fun)
   "run funtion at point if available. if apply success,
@@ -770,7 +772,7 @@ as `decode-time' return"
 
 (defun org-sgcal-apply-and-update-at-point (post-fun)
   "Apply update heading at point (if success)"
-  (maybe-flatmap
+  (maybe-map
    (org-sgcal--apply-at-point post-fun)
    (lambda (ret)
      (when (not (org-at-heading-p))
@@ -783,7 +785,8 @@ as `decode-time' return"
        (if here
 	   (org-indent-region
 	    (org-element-property :begin here)
-	    (org-element-property :end here)))))))
+	    (org-element-property :end here))))
+     ret)))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
