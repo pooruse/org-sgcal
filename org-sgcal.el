@@ -381,11 +381,14 @@ contents is org struct text below property drawer
     
     ;; create and set node properties
     (when properties
-	(dolist (p properties)
-	  (let ((node (org-element-create 'node-property)))
-	    (setq node (org-element-put-property node :key (car p)))
-	    (setq node (org-element-put-property node :value (cdr p)))
-	    (setq e-draw (org-element-adopt-elements e-draw node)))))
+      (dolist (p properties)
+        
+        (let ((node (org-element-create 'node-property))
+              (key (car p))
+              (value (cdr p)))
+          (setq node (org-element-put-property node :key key))
+          (setq node (org-element-put-property node :value value))
+          (setq e-draw (org-element-adopt-elements e-draw node)))))
 
     ;; set paragraph
     (when contents
@@ -510,6 +513,7 @@ This function will erase current buffer if success."
 			 (atoken (cdr (assq 'access_token acount-data))))
 		    (let ((name (car (org-element-property :title h2)))
 			  (cid (org-element-property :CALENDAR-ID h2))
+                          (color-id (org-element-property :COLOR-ID h2))
 			  (max (convert-time-to-string
 				(decode-time
 				 (time-add
@@ -530,7 +534,8 @@ This function will erase current buffer if success."
 					  (setq new_h2
 						(org-sgcal--create-headline
 						 `(,name 2 nil)
-						 `(("CALENDAR-ID" . ,cid))))
+						 (cons `("CALENDAR-ID" . ,cid)
+                                                       (when color-id `(("COLOR-ID" . ,color-id))))))
 					  (setq new_h2
 						(apply #'org-element-adopt-elements
 						       new_h2
