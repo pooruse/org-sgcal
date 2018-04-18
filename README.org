@@ -1,0 +1,65 @@
+* org-sgcal
+** Overview
+   This project is an alternative tool for [[https://github.com/myuhe/org-gcal.el][org-gcal]].
+
+** Feature
+   - Fetch events from google calendar
+   - Post/Delete events from google calendar
+   - Support todo-keyword and user can set color according to the todo keyword.
+   - Mark each event with UPDATE/DELETE tag, and update/delete it one time
+     
+** Requirements
+   [[https://github.com/tkf/emacs-request][emacs/request]]
+
+** Install
+   1. Enable google calendar api and generator api credential.
+      [[https://support.google.com/googleapi/answer/6158849?hl=en&ref_topic=7013279][How to enable google calendar api]]
+   2. Install emacs/request by emacs command `package-install'.
+   3. Run package-install, then enter request, then enter
+       
+   4. Clone org-sgcal source code into your .emacs directory.
+      git clone https://github.com/pooruse/org-sgcal.git
+
+   5. Add it to load-path 
+      add command below into init.el
+      (add-to-list 'load-path "~/.emacs.d/usr")
+      Here I clone org-sgcal into ~/.emacs.d/usr
+
+   6. Import package by (require 'org-sgcal)
+      add (require 'org-sgcal) after command in previous step
+
+** Quick Start
+   Create an empty org file.
+   Insert contents below
+
+   #+BEGIN_EXAMPLE
+   * api projector title (any name is OK)
+     :PROPERTIES:
+     :CLIENT-ID: your-google-api-client-id
+     :CLIENT-SECRET: your-google-api-client-secret
+     :END:
+     ** calendar name (any name is OK)
+     :PROPERTIES:
+     :CLIENT-ID: your-google-api-client-id
+     :CLIENT-SECRET: your-google-api-client-secret
+     :COLOR-ID: (TODO 0 DONE 1) (optional property)
+     :END:
+   #+END_EXAMPLE
+   
+   run org-sgcal-fetch-all will fetch events from your calendar
+   then you can use org-sgcal-post-at-point or org-sgcal-delete-at-point to modify events.
+
+   or use org-sgcal-update-by-tag to update or delete events with tag UPDATE or DELETE
+
+   I recommand you add #+TAGS: UPDATE(u) DELETE(d) in the beginning of org file.
+
+** custommer varriables
+
+*** org-sgcal-timezone
+    This variable will effect the time zone settings in command org-sgcal-post-event.
+    Default value is Asia/Taipei
+   
+*** org-sgcal-up-days
+*** org-sgcal-down-days
+    this two variable will effect the time range of org-sgcal-fetch-all.
+    In default setting, org-sgcal will fetch from 60 day before now to 30 day after now.
