@@ -69,7 +69,8 @@
 		:noApiHeadingErr "Please give a name to your api heading"
 		:noCalHeadingErr "Pleave give a name to your canlendar heading"
                 :tokenExpiredErr "Access token expired, please run org-sgcal-update-tokens again"
-                :unknownHttpErr "Unknown http error")
+                :unknownHttpErr "Unknown http error"
+                :eid404Err "Can't find events with title \"%s\".".)
   "This list contains all error could happend in sgcal")
 
 
@@ -284,31 +285,41 @@ It returns the code provided by the service."
   "post or update event in specify calendar(depends on eid). "
   (let ((data (maybe-error-make :tokenExpiredErr))
         (stime (if (> (length start) 11) "dateTime" "date")))
-    (request
-     (concat (org-sgcal--get-events-url cid)
-	     (when eid (concat "/" eid)))
-     :sync t
-     :timeout org-sgcal-request-time-out
-     :type (if eid "PATCH" "POST")
-     :headers '(("Content-Type" . "application/json"))
-     :data (json-encode `(("start" (,stime . ,start) ("timeZone" . ,org-sgcal-timezone))
-			  ("end" (,stime ,end) ("timeZone" . ,org-sgcal-timezone))
-			  ("summary" . ,smry)
-			  ("location" . ,loc)
-			  ("description" . ,desc)
-			  ("colorId" . ,color-id)))
-     :params `(("access_token" . ,a-token)
-	       ("key" . ,client-secret)
-	       ("grant_type" . "authorization_code"))
+    (cond ((and (equal stime "dateTime") (null end))
+           (maybe-error-make :startDateTimeWithoutEnd))
+          ((and (equal stime "dateTime") (< (length end) 11))
+           (maybe-error-make :startDateTimeWithoutEnd))
+          (t
+           (progn 
+             (request
+              (concat (org-sgcal--get-events-url cid)
+                      (when eid (concat "/" eid)))
+              :sync t
+              :timeout org-sgcal-request-time-out
+              :type (if eid "PATCH" "POST")
+              :headers '(("Content-Type" . "application/json"))
+              :data (json-encode `(("start" (,stime . ,start) ("timeZone" . ,org-sgcal-timezone))
+                                   ("end" (,stime ,end) ("timeZone" . ,org-sgcal-timezone))
+                                   ("summary" . ,smry)
+                                   ("location" . ,loc)
+                                   ("description" . ,desc)
+                                   ("colorId" . ,color-id)))
+              :params `(("access_token" . ,a-token)
+                        ("key" . ,client-secret)
+                        ("grant_type" . "authorization_code"))
 
-     :parser 'org-sgcal--json-read
-     :error (cl-function
-	     (lambda (&key error-thrown &allow-other-keys)
-	       (setq data (maybe-error-make `(:httpErr ,error-thrown)))))
-     :success (cl-function
-	       (lambda (&key response &allow-other-keys)
-		 (setq data (maybe-make (request-response-data response))))))
-    data))
+              :parser 'org-sgcal--json-read
+              :error (cl-function
+                      (lambda (&key error-txhrown &allow-other-keys)
+                        (setq data (maybe-error-make `(:httpErr ,error-thrown)))))
+              :success (cl-function
+                        (lambda (&key response &allow-other-keys)
+                          (cond ((eq (request-response-status-code response) 404)
+                                 (setq data (maybe-error-make `(:eid404Err ,smry))))
+                                (t
+                                 (setq data (maybe-make (request-response-data response)))))))
+              )
+             data)))))
 
 (defun org-sgcal-delete-event (cid a-token client-secret eid)
   "delete specify event from calendar"
