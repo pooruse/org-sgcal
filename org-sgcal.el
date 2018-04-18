@@ -735,7 +735,7 @@ this function should format like
                    atoken
                    client-secret
                    start
-                   name)
+                   (not (equal "" name)))
               (funcall
                fun cid atoken client-secret
                eid start-date end-date
@@ -799,6 +799,114 @@ as `decode-time' return"
 	    (org-element-property :begin here)
 	    (org-element-property :end here))))
      ret)))
+
+(defun org-sgcal--apply-at-tags (update-fun delete-fun)
+  "Apply update-fun on heading with :UPDATE: tag.
+apply delete-fun on heading with :DELETE: tag"
+  (let ((ele (org-element-parse-buffer))
+        (update-tag "UPDATE")
+        (delete-tag "DELETE"))
+    (let ((res-list 
+	   (org-sgcal--headline-map
+	    3 ele
+	    (lambda (h1 h2 h3)
+	      (let* ((title (substring-no-properties (car (org-element-property :title h1))))
+		    (client-id (org-element-property :CLIENT-ID h1))
+		    (client-secret (org-element-property :CLIENT-SECRET h1))
+                    (account (assq (intern title) org-sgcal-token-alist))
+                    (acount-data (cdr account))
+                    (atoken (cdr (assq 'access_token acount-data)))
+                    
+                    (cname (car (org-element-property :title h2)))
+                    (cid (org-element-property :CALENDAR-ID h2))
+                    
+                    (color-id (org-element-property :COLOR-ID h2))
+                    (eid (org-element-property :ID h3))
+                    (todo (let  ((_todo (org-element-property :todo-keyword h3)))
+                            (if _todo
+                                (substring-no-properties _todo)
+                              nil)))
+                    
+                    (ename (substring-no-properties (car (org-element-property :title h3))))
+                    (start (let ((stamp (org-element-property :scheduled h3)))
+                             (if stamp
+                                 `(0
+                                   ,(org-element-property :minute-start stamp)
+                                   ,(org-element-property :hour-start stamp)
+                                   ,(org-element-property :day-start stamp)
+                                   ,(org-element-property :month-start stamp)
+                                   ,(org-element-property :year-start stamp)
+                                   nil)
+                               nil)))
+                    
+                    (end (let ((stamp (org-element-property :deadline here)))
+				      (if stamp
+					  `(0
+					    ,(org-element-property :minute-start stamp)
+					    ,(org-element-property :hour-start stamp)
+					    ,(org-element-property :day-start stamp)
+					    ,(org-element-property :month-start stamp)
+					    ,(org-element-property :year-start stamp)
+					    nil)
+					nil)
+				      ))
+                    (desc (org-element-map h3 'paragraph
+                            (lambda (p) 
+                              (org-element-contents p)) nil t))
+                    
+                    (updated (org-element-property :UPDATED h3))
+                    
+                    (smry (concat (when todo (concat todo " ")) ename))
+                    (start-date (if start (convert-time-to-string start)))
+                    (end-date (cond (end (convert-time-to-string end))
+                                    ((not start) nil)
+                                    ((not (nth 2 start))
+                                     (convert-time-to-string
+                                      `(nil nil nil ,(1+ (nth 3 start))
+                                            ,(nth 4 start)
+                                            ,(nth 5 start)
+                                            nil)))))
+                    
+                    (tags (org-element-property :TAGS h3))
+                    (tag (letrec
+                             ((_find-tag (lambda (_tags)
+                                           (let ((_tag (car _tags)))
+                                             (cond ((null _tag) nil)
+                                                   ((equal update-tag (substring-no-properties _tag)))
+                                                   ((equal delete-tag (substring-no-properties _tag)))
+                                                   (t (funcall _find-tag (cdr _tags)))))
+                                           (funcall _find-tag tags)))))))
+                (cond
+                 ((null tag) nil)
+                 ((null account) (maybe-error-make `(:fetchAllErr ,title)))
+                 ((equal "" cname) (maybe-error-make :noCalHeadingErr))
+                 ((equal "" title) (maybe-error-make :noApiHeadingErr))
+                 ((not atoken) (maybe-error-make :notokenErr))
+                 ((or (null cid)
+                      (null atoken)
+                      (null client-secret)
+                      (null start)
+                      (equal ename "") (maybe-error-make :headingFormatErr)))
+                 ((equal tag update-tag)
+                  (maybe-map
+                   (funcall
+                    update-fun cid atoken client-secret
+                    eid start-date end-date
+                    smry nil desc
+                    (if todo (plist-get color-id (intern todo)) nil))
+                   (lambda (item)
+                     (org-element-set-element h3 (org-sgcal--parse-item item 3))
+                     (maybe-make t))))
+                 ((equal tag delete-tag)
+                  (maybe-map
+                   (funcall delete-fun cid atoken client-secret eid)
+                   (lambda (ret)
+                     (org-element-extract-element h3)
+                     )))))))))
+      (erase-buffer)
+      (insert (org-element-interpret-data ele))
+      (org-indent-region (point-min) (point-max))
+      res-list)))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
