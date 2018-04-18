@@ -53,6 +53,14 @@
 
    I recommand you add #+TAGS: UPDATE(u) DELETE(d) in the beginning of org file.
 
+** How to use the property, COLOR-ID
+   You can learn something from [[https://eduardopereira.pt/2012/06/google-calendar-api-v3-set-color-color-chart/][this blog]],
+   google calendar api provide 11 colors by id. You can choose it by integer from 1 to 11. (0 is calendar color depends on your calendar setting)
+   sgcal will choose the color from COLOR-ID property according to todo-keyword.
+   
+*** format
+    Value of COLOR-ID is an elisp plist, for example, If we have COLOR-ID with (TODO 5 DONE 6), org-sgcal will set color-id=5 when you intend to post an event with TODO todo-keyword. And set color-id=6 when todo-keyword is DONE.
+    
 ** custommer varriables
 
 *** org-sgcal-timezone
