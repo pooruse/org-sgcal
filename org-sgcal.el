@@ -29,6 +29,10 @@
   0.1
   "timeout for http requests")
 
+(defconst org-sgcal--version
+  "1.0.0"
+  "version for org-sgcal")
+
 (defcustom org-sgcal-timezone "Asia/Taipei"
   "Default timezone for org-sgcal"
   :group 'org-sgcal
@@ -133,6 +137,11 @@ and return the result"
       maybe-val)))
 
 ;;; org-sgcal user functions
+(defun org-sgcal-version ()
+  "Get org-sgcal-version"
+  (interactive)
+  (message org-sgcal--version))
+
 (defun org-sgcal-update-tokens ()
   "Update tokens by settings of current buffer"
   (interactive)
