@@ -866,3 +866,226 @@ replace headline currectly"
    (equal (format "%s" (maybe-error-flatten '(((maybe-error . a) (maybe-error . b)) (maybe-error . c))))
 	  (format "%s" '((maybe-error . a) (maybe-error . b) (maybe-error . c))))))
 
+
+(ert-deftest test-org-sgcal/apply-at-tags ()
+  (should (equal (with-temp-buffer
+                   (org-mode)
+                   (insert "* heading2 for test\n"
+                           "  :PROPERTIES:\n"
+                           "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+                           "  :CLIENT-SECRET: 12341283461278561\n"
+                           "  :END:\n"
+                           "** sub title\n"
+                           "   :PROPERTIES:\n"
+                           "   :CALENDAR-ID: abcde\n"
+                           "   :END:\n"
+                           "*** event_1                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "*** event_2                                                          :DELETE:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       asdfghjkl\n"
+                           "    :UPDATED:  1234981234\n"
+                           "    :END:\n"
+                           "*** event_3                                               :test1:test2:test3:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456abc\n"
+                           "    :UPDATED:  12039481723abc\n"
+                           "    :END:\n"
+                           "*** event_4                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456\n"
+                           "    :UPDATED:  120394817230498\n"
+                           "    :END:\n"
+                           "    \n")
+                   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+                   (org-sgcal--apply-at-tags #'dummy-post-event #'return-t)
+                   (buffer-string))
+                 (concat
+                  "* heading2 for test\n"
+                  "  :PROPERTIES:\n"
+                  "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+                  "  :CLIENT-SECRET: 12341283461278561\n"
+                  "  :END:\n"
+                  "** sub title\n"
+                  "   :PROPERTIES:\n"
+                  "   :CALENDAR-ID: abcde\n"
+                  "   :END:\n"
+                  "*** OK I am good\n"
+                  "    DEADLINE: <2018-04-05 四> SCHEDULED: <2018-04-03 二>\n"
+                  "    :PROPERTIES:\n"
+                  "    :ID:       Id is here\n"
+                  "    :UPDATED:  2018-04-04T00:05:30Z\n"
+                  "    :END:\n"
+                  "    Hey Hey\n"
+                  "*** event_3                                               :test1:test2:test3:\n"
+                  "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                  "    :PROPERTIES:\n"
+                  "    :ID:       123456abc\n"
+                  "    :UPDATED:  12039481723abc\n"
+                  "    :END:\n"
+                  "*** OK I am good\n"
+                  "    DEADLINE: <2018-04-05 四> SCHEDULED: <2018-04-03 二>\n"
+                  "    :PROPERTIES:\n"
+                  "    :ID:       Id is here\n"
+                  "    :UPDATED:  2018-04-04T00:05:30Z\n"
+                  "    :END:\n    Hey Hey\n\n")
+                 ))
+  (should (equal (with-temp-buffer
+                   (org-mode)
+                   (insert "* \n"
+                           "  :PROPERTIES:\n"
+                           "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+                           "  :CLIENT-SECRET: 12341283461278561\n"
+                           "  :END:\n"
+                           "** sub title\n"
+                           "   :PROPERTIES:\n"
+                           "   :CALENDAR-ID: abcde\n"
+                           "   :END:\n"
+                           "*** event_1                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "*** event_2                                                          :DELETE:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       asdfghjkl\n"
+                           "    :UPDATED:  1234981234\n"
+                           "    :END:\n"
+                           "*** event_3                                               :test1:test2:test3:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456abc\n"
+                           "    :UPDATED:  12039481723abc\n"
+                           "    :END:\n"
+                           "*** event_4                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456\n"
+                           "    :UPDATED:  120394817230498\n"
+                           "    :END:\n"
+                           "    \n")
+                   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+                   (maybe-error-get
+                    (car
+                     (maybe-error-flatten
+                      (org-sgcal--apply-at-tags #'dummy-post-event #'return-t)))))
+                 :noApiHeadingErr))
+
+  (should (equal (with-temp-buffer
+                   (org-mode)
+                   (insert "* Test heading\n"
+                           "  :PROPERTIES:\n"
+                           "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+                           "  :CLIENT-SECRET: 12341283461278561\n"
+                           "  :END:\n"
+                           "** \n"
+                           "   :PROPERTIES:\n"
+                           "   :CALENDAR-ID: abcde\n"
+                           "   :END:\n"
+                           "*** event_1                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "*** event_2                                                          :DELETE:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       asdfghjkl\n"
+                           "    :UPDATED:  1234981234\n"
+                           "    :END:\n"
+                           "*** event_3                                               :test1:test2:test3:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456abc\n"
+                           "    :UPDATED:  12039481723abc\n"
+                           "    :END:\n"
+                           "*** event_4                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456\n"
+                           "    :UPDATED:  120394817230498\n"
+                           "    :END:\n"
+                           "    \n")
+                   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+                   (maybe-error-get
+                    (car
+                     (maybe-error-flatten
+                      (org-sgcal--apply-at-tags #'dummy-post-event #'return-t)))))
+                 :noCalHeadingErr))
+
+  (should (equal (with-temp-buffer
+                   (org-mode)
+                   (insert "* Test heading\n"
+                           "  :PROPERTIES:\n"
+                           "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+                           "  :CLIENT-SECRET: 12341283461278561\n"
+                           "  :END:\n"
+                           "** subheading\n"
+                           "   :PROPERTIES:\n"
+                           "   :CALENDAR-ID: abcde\n"
+                           "   :END:\n"
+                           "*** event_1                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "*** event_2                                                          :DELETE:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       asdfghjkl\n"
+                           "    :UPDATED:  1234981234\n"
+                           "    :END:\n"
+                           "*** event_3                                               :test1:test2:test3:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456abc\n"
+                           "    :UPDATED:  12039481723abc\n"
+                           "    :END:\n"
+                           "*** test                                                          :UPDATE:\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456\n"
+                           "    :UPDATED:  120394817230498\n"
+                           "    :END:\n"
+                           "    \n")
+                   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+                   (maybe-error-get
+                    (car
+                     (maybe-error-flatten
+                      (org-sgcal--apply-at-tags #'dummy-post-event #'return-t)))))
+                 :headingFormatErr))
+  
+  (should (equal (with-temp-buffer
+                   (org-mode)
+                   (insert "* test heading\n"
+                           "  :PROPERTIES:\n"
+                           "  :CLIENT-ID: asdlfkjadkjfhasjkdhfas\n"
+                           "  :CLIENT-SECRET: 12341283461278561\n"
+                           "  :END:\n"
+                           "** sub title\n"
+                           "   :PROPERTIES:\n"
+                           "   :CALENDAR-ID: abcde\n"
+                           "   :END:\n"
+                           "*** event_1                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "*** event_2                                                          :DELETE:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       asdfghjkl\n"
+                           "    :UPDATED:  1234981234\n"
+                           "    :END:\n"
+                           "*** event_3                                               :test1:test2:test3:\n"
+                           "    DEADLINE: <2018-04-19 四> SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456abc\n"
+                           "    :UPDATED:  12039481723abc\n"
+                           "    :END:\n"
+                           "*** event_4                                                          :UPDATE:\n"
+                           "    SCHEDULED: <2018-04-18 三>\n"
+                           "    :PROPERTIES:\n"
+                           "    :ID:       123456\n"
+                           "    :UPDATED:  120394817230498\n"
+                           "    :END:\n"
+                           "    \n")
+                   (org-sgcal-clear-tokens)
+                   (car
+                    (maybe-error-get
+                     (car
+                      (maybe-error-flatten
+                       (org-sgcal--apply-at-tags #'dummy-post-event #'return-t))))))
+                 :fetchAllErr))
+  )

@@ -839,7 +839,7 @@ apply delete-fun on heading with :DELETE: tag"
                                    nil)
                                nil)))
                     
-                    (end (let ((stamp (org-element-property :deadline here)))
+                    (end (let ((stamp (org-element-property :deadline h3)))
 				      (if stamp
 					  `(0
 					    ,(org-element-property :minute-start stamp)
@@ -867,26 +867,27 @@ apply delete-fun on heading with :DELETE: tag"
                                             ,(nth 5 start)
                                             nil)))))
                     
-                    (tags (org-element-property :TAGS h3))
+                    (tags (org-element-property :tags h3))
                     (tag (letrec
                              ((_find-tag (lambda (_tags)
                                            (let ((_tag (car _tags)))
                                              (cond ((null _tag) nil)
-                                                   ((equal update-tag (substring-no-properties _tag)))
-                                                   ((equal delete-tag (substring-no-properties _tag)))
-                                                   (t (funcall _find-tag (cdr _tags)))))
-                                           (funcall _find-tag tags)))))))
+                                                   ((equal update-tag (substring-no-properties _tag)) update-tag)
+                                                   ((equal delete-tag (substring-no-properties _tag)) delete-tag)
+                                                   (t (funcall _find-tag (cdr _tags))))))))
+                           (funcall _find-tag tags))))
                 (cond
                  ((null tag) nil)
-                 ((null account) (maybe-error-make `(:fetchAllErr ,title)))
+                 
                  ((equal "" cname) (maybe-error-make :noCalHeadingErr))
                  ((equal "" title) (maybe-error-make :noApiHeadingErr))
+                 ((null account) (maybe-error-make `(:fetchAllErr ,title)))
                  ((not atoken) (maybe-error-make :notokenErr))
                  ((or (null cid)
                       (null atoken)
                       (null client-secret)
                       (null start)
-                      (equal ename "") (maybe-error-make :headingFormatErr)))
+                      (equal ename "")) (maybe-error-make :headingFormatErr))
                  ((equal tag update-tag)
                   (maybe-map
                    (funcall
@@ -896,7 +897,7 @@ apply delete-fun on heading with :DELETE: tag"
                     (if todo (plist-get color-id (intern todo)) nil))
                    (lambda (item)
                      (org-element-set-element h3 (org-sgcal--parse-item item 3))
-                     (maybe-make t))))
+                     t)))
                  ((equal tag delete-tag)
                   (maybe-map
                    (funcall delete-fun cid atoken client-secret eid)
