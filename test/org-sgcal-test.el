@@ -441,6 +441,44 @@ replace headline currectly"
 		    (car
 		     (maybe-error-flatten (org-sgcal--update-level3-headlines #'dummy-events-list)))))
 		 :noCalHeadingErr))
+  (should (equal (with-temp-buffer
+		   (insert "* My self for test\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** main-cal\n"
+			   "   :PROPERTIES:\n"
+                           "   :COLOR-ID: (TODO 1)\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
+		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+		   (org-sgcal--update-level3-headlines #'dummy-events-list)
+		   (buffer-string))
+		 (concat "* My self for test\n"
+			 ":PROPERTIES:\n"
+			 ":CLIENT-ID: test-client-id\n"
+			 ":CLIENT-SECRET: test-client-secret\n"
+			 ":END:\n"
+			 "** main-cal\n"
+			 "  :PROPERTIES:\n"
+			 "  :CALENDAR-ID: test_cid\n"
+                         "  :COLOR-ID: (TODO 1)\n"
+			 "  :END:\n"
+			 "*** hee\n"
+			 "   DEADLINE: <2018-04-02 一> SCHEDULED: <2018-04-01 日>\n"
+			 "   :PROPERTIES:\n"
+			 "   :ID:       test\n"
+			 "   :UPDATED:  2018-01-01T01:02:03Z\n"
+			 "   :END:\n"
+			 "   Hello word\n"
+			 "*** hee\n"
+			 "   DEADLINE: <2018-04-02 一 20:00> SCHEDULED: <2018-04-01 日 08:00>\n"
+			 "   :PROPERTIES:\n"
+			 "   :ID:       test2\n"
+			 "   :UPDATED:  2018-01-01T01:02:03Z\n"
+			 "   :END:\n"
+			 "   Poo boo\n")))
   )
 
 
