@@ -22,8 +22,8 @@
 
    5. Add it to load-path 
       add command below into init.el
-      (add-to-list 'load-path "~/.emacs.d/usr")
-      Here I clone org-sgcal into ~/.emacs.d/usr
+      (add-to-list 'load-path "~/.emacs.d/usr/org-sgcal")
+      Here I clone org-sgcal into ~/.emacs.d/usr/
 
    6. Import package by (require 'org-sgcal)
       add (require 'org-sgcal) after command in previous step
