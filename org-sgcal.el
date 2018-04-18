@@ -25,6 +25,10 @@
   '("%Y-%m-%d" .  "%Y-%m-%dT%H:%M:%SZ")
   "time format for get event list")
 
+(defconst org-sgcal-request-time-out
+  0.1
+  "timeout for http requests")
+
 (defcustom org-sgcal-timezone "Asia/Taipei"
   "Default timezone for org-sgcal"
   :group 'org-sgcal
@@ -204,6 +208,7 @@ It returns the code provided by the service."
     (request
      org-sgcal-token-url
      :sync t
+     :timeout org-sgcal-request-time-out
      :type "POST"
      :data `(("client_id" . ,client-id)
 	     ("client_secret" . ,client-secret)
@@ -225,6 +230,7 @@ It returns the code provided by the service."
     (request
      org-sgcal-token-url
      :sync t
+     :timeout org-sgcal-request-time-out
      :type "POST"
      :data `(("client_id" . ,client-id)
 	     ("client_secret" . ,client-secret)
@@ -245,6 +251,7 @@ It returns the code provided by the service."
     (request
      (org-sgcal--get-events-url cid)
      :sync t
+     :timeout org-sgcal-request-time-out
      :type "GET"
      :params `(("access_token" . ,a-token)
 	       ("key" . ,client-secret)
@@ -271,6 +278,7 @@ It returns the code provided by the service."
      (concat (org-sgcal--get-events-url cid)
 	     (when eid (concat "/" eid)))
      :sync t
+     :timeout org-sgcal-request-time-out
      :type (if eid "PATCH" "POST")
      :headers '(("Content-Type" . "application/json"))
      :data (json-encode `(("start" (,stime . ,start) ("timeZone" . ,org-sgcal-timezone))
@@ -299,6 +307,7 @@ It returns the code provided by the service."
 	(request
 	 (concat (org-sgcal--get-events-url cid) "/" eid)
 	 :sync t
+         :timeout org-sgcal-request-time-out
 	 :type "DELETE"
 	 :headers '(("Content-Type" . "application/json"))
 	 :params `(("access_token" . ,a-token)

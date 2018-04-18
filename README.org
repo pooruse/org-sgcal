@@ -71,3 +71,7 @@
 *** org-sgcal-down-days
     this two variable will effect the time range of org-sgcal-fetch-all.
     In default setting, org-sgcal will fetch from 60 day before now to 30 day after now.
+** Bugs
+   When google api oath2 token is expired, emacs will show
+   "error in process filter: url-http-parse-headers: Wrong type argument: char-or-string-p, nil"
+   after you want to modify your events. Please run org-sgcal-update-tokens to fix this problem
