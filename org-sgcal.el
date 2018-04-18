@@ -26,7 +26,7 @@
   "time format for get event list")
 
 (defconst org-sgcal-request-time-out
-  0.1
+  10
   "timeout for http requests")
 
 (defconst org-sgcal--version
