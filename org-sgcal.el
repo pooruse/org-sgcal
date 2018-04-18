@@ -169,8 +169,7 @@ This function will erase current buffer if success."
     (dolist (err (maybe-error-flatten err-list))
       (let ((err-type (maybe-error-get err)))
 	(if err-type
-	    (message (maybe-error-string err-type))
-	  (message "fetch all success"))))))
+	    (message (maybe-error-string err-type)))))))
 
 (defun org-sgcal-post-at-point ()
   "Post or update events at point"
