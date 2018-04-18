@@ -63,7 +63,9 @@
 		:fetchAllErr "Can't find access token for \"%s\"."
                 :applyAtPointErr "Point is not on any heading."
 		:noApiHeadingErr "Please give a name to your api heading"
-		:noCalHeadingErr "Pleave give a name to your canlendar heading")
+		:noCalHeadingErr "Pleave give a name to your canlendar heading"
+                :tokenExpiredErr "Access token expired, please run org-sgcal-update-tokens again"
+                :unknownHttpErr "Unknown http error")
   "This list contains all error could happend in sgcal")
 
 
@@ -204,7 +206,7 @@ It returns the code provided by the service."
 
 (defun org-sgcal-request-token (client-id client-secret nickname)
   "Request OAuth access at TOKEN-URL."
-  (let (data)
+  (let ((data (maybe-error-make :unknownHttpErr)))
     (request
      org-sgcal-token-url
      :sync t
@@ -226,7 +228,7 @@ It returns the code provided by the service."
 
 (defun org-sgcal-refresh-token (client-id client-secret refresh-token nickname)
   "refresh google api auth 2 token"
-  (let (data)
+  (let ((data (maybe-error-make :unknownHttpErr)))
     (request
      org-sgcal-token-url
      :sync t
@@ -247,7 +249,7 @@ It returns the code provided by the service."
 
 (defun org-sgcal-get-event-list (cid a-token client-secret min max)
   "Get event list from calendar"
-  (let (data)
+  (let ((data (maybe-error-make :tokenExpiredErr)))
     (request
      (org-sgcal--get-events-url cid)
      :sync t
@@ -272,7 +274,7 @@ It returns the code provided by the service."
 (defun org-sgcal-post-event (cid a-token client-secret eid
 				 start end smry loc desc color-id)
   "post or update event in specify calendar(depends on eid). "
-  (let ((data)
+  (let ((data (maybe-error-make :tokenExpiredErr))
         (stime (if (> (length start) 11) "dateTime" "date")))
     (request
      (concat (org-sgcal--get-events-url cid)
@@ -303,7 +305,7 @@ It returns the code provided by the service."
 (defun org-sgcal-delete-event (cid a-token client-secret eid)
   "delete specify event from calendar"
   (if eid
-      (let (out)
+      (let ((out (maybe-error-make :tokenExpiredErr)))
 	(request
 	 (concat (org-sgcal--get-events-url cid) "/" eid)
 	 :sync t
