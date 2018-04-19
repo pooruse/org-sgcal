@@ -30,7 +30,7 @@
   "timeout for http requests")
 
 (defconst org-sgcal--version
-  "1.0.1"
+  "1.0.2"
   "version for org-sgcal")
 
 (defcustom org-sgcal-timezone "Asia/Taipei"
