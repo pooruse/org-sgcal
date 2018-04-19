@@ -35,31 +35,34 @@ as `decode-time' return"
 
 (defun dummy-request-token (client-id client-secret nickname)
   "return dummy token for test"
-  (maybe-make `((access_token . "aacceess")
-		(refresh_token . "rreeffrr"))))
+  
+  (maybe-make (list (cons 'access_token  "aacceess")
+                    (cons 'refresh_token  "rreeffrr")
+                    (cons 'expires_in  3600))))
 
 (defun dummy-refresh-token (client-id client-secret refresh-token nickname)
   "return dummy token for test (only access_token"
-  (maybe-make `((access_token . "aacceess"))))
+  (maybe-make (list (cons 'access_token  "aacceess")
+                    (cons 'expires_in  3600))))
 
 (defun dummy-events-list (&rest argv)
   "return dummy events list for test"
   (maybe-make '((items . [(
-			  (id . "test")
-			  (description . "Hello word")
-			  (start . ((date . "2018-04-01")))
-			  (end . ((date . "2018-04-02")))
-			  (updated . "2018-01-01T01:02:03Z")
-			  (description . "Hello word")
-			  (summary . "hee"))
-			 (
-			  (id . "test2")
-			  (description . "Poo boo")
-			  (start . ((dateTime . "2018-04-01T08:00:00+0800")))
-			  (end . ((dateTime . "2018-04-02T20:00:00+0800")))
-			  (updated . "2018-01-01T01:02:03Z")
-			  (description . "Hello word")
-			  (summary . "hee"))]))))
+                           (id . "test")
+                           (description . "Hello word")
+                           (start . ((date . "2018-04-01")))
+                           (end . ((date . "2018-04-02")))
+                           (updated . "2018-01-01T01:02:03Z")
+                           (description . "Hello word")
+                           (summary . "hee"))
+                          (
+                           (id . "test2")
+                           (description . "Poo boo")
+                           (start . ((dateTime . "2018-04-01T08:00:00+0800")))
+                           (end . ((dateTime . "2018-04-02T20:00:00+0800")))
+                           (updated . "2018-01-01T01:02:03Z")
+                           (description . "Hello word")
+                           (summary . "hee"))]))))
 
 (ert-deftest test-org-sgcal/update-token-error ()
   (should (equal (with-temp-buffer
@@ -435,7 +438,7 @@ replace headline currectly"
 			 "   :END:\n"
 			 "   Poo boo\n")))
   (should (equal (with-temp-buffer
-		   (insert "* My self for test\n"
+                   (insert "* My self for test\n"
 			   "  :PROPERTIES:\n"
 			   "  :CLIENT-ID: test-client-id\n"
 			   "  :CLIENT-SECRET: test-client-secret\n"
@@ -448,7 +451,8 @@ replace headline currectly"
 		   (maybe-error-get
 		    (car
 		     (maybe-error-flatten (org-sgcal--update-level3-headlines #'dummy-events-list)))))
-		 :noCalHeadingErr))
+                 :noCalHeadingErr))
+  
   (should (equal (with-temp-buffer
 		   (insert "* My self for test\n"
 			   "  :PROPERTIES:\n"
@@ -778,11 +782,12 @@ replace headline currectly"
 			     "    :END:\n"
 			     "abcdefg\n")
 	     
-	     (maybe-error-get
-	      (org-sgcal--delete-at-point-and-apply (lambda (&rest argv)
-						      (return-maybe-error ':httpErr401)
-						      )
-						    #'return-t)))
+	     (car
+              (maybe-error-get
+               (org-sgcal--delete-at-point-and-apply (lambda (&rest argv)
+                                                       (return-maybe-error ':httpErr401)
+                                                       )
+                                                     #'return-t))))
 	  :notokenErr))
   (should
    (equal (with-temp-buffer
@@ -895,7 +900,7 @@ replace headline currectly"
 			     "    :UPDATED:  2018-04-11T23:46:09.411Z\n"
 			     "    :END:\n"
 			     "abcdefg\n")
-	     (maybe-error-get (org-sgcal--apply-and-update-at-point #'dummy-post-event)))
+	     (car (maybe-error-get (org-sgcal--apply-and-update-at-point #'dummy-post-event))))
 	  
 	  :notokenErr))
   (should
@@ -1217,5 +1222,40 @@ replace headline currectly"
                      (car
                       (maybe-error-flatten
                        (org-sgcal--apply-at-tags #'dummy-post-event #'return-t))))))
-                 :fetchAllErr))
+                 :notokenErr))
   )
+
+(ert-deftest test-org-sgcal/get-atoken ()
+  "test for org-sgcal--get-atoken"
+  (should (equal (with-temp-buffer
+                   (org-mode)
+		   (insert "* testgettoken\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** main-cal\n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
+		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+		   (org-sgcal--get-atoken "testgettoken"))
+		 "aacceess"))
+  
+  (should (equal (with-temp-buffer
+                   (org-mode)
+		   (insert "* testgettoken\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** main-cal\n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
+		   (org-sgcal--update-token-alist #'dummy-request-token #'dummy-refresh-token)
+                   (let* ((account (assq (intern "testgettoken") org-sgcal-token-alist)))
+                     (setcdr (assq 'expires_in account)
+                             (time-subtract (current-time) (seconds-to-time 60))))
+		   (org-sgcal--get-atoken "testgettoken"))
+		 nil)))

@@ -60,16 +60,16 @@
 						  "You should add an :DEADLINE to it with same format")
 		:deleteErr "No events it in properties of this heading"
 		:httpErr "Http error code: %s"
-		:notokenErr "No token available, please run org-sgcal-update-tokens"
+		:notokenErr (concat "Can't find token for \"%s\"\n"
+                                    "Please run org-sgcal-clear-tokens org-sgcal-update-tokens")
 		:requestTokenErr "Fail on request token for \"%s\". Error code is %s."
 		:refreshTokenErr "Fail on refresh token for \"%s\". Error code is %s."
 		:tokenHeadingFormatErr "Fail because heading \"%s\" did not contain client-id or client-secret"
-		:fetchAllErr "Can't find access token for \"%s\"."
                 :applyAtPointErr "Point is not on any heading."
 		:noApiHeadingErr "Please give a name to your api heading"
 		:noCalHeadingErr "Pleave give a name to your canlendar heading"
-                :tokenExpiredErr "Access token expired, please run org-sgcal-update-tokens again"
-                :unknownHttpErr "Unknown http error"
+                :unknownHttpErr (concat "Unknown http error, maybe you can run "
+                                        "org-sgcal-update-tokens and run again.")
                 :eid404Err "Can't find events with title \"%s\".".)
   "This list contains all error could happend in sgcal")
 
@@ -77,7 +77,7 @@
 ;;; maybe class
 (defun maybe-error-make (reason)
   "create a maybe-error class with error code"
-  `(maybe-error . ,reason))
+  (cons 'maybe-error reason))
 
 (defun maybe-error-get (maybe-err)
   "Get error message from maybe-err"
@@ -112,7 +112,7 @@ will become '((maybe-error a) (maybe-error b) (maybe-error c)))"
 
 (defun maybe-make (val)
   "contructor for maybe"
-  `(maybe . ,val))
+  (cons 'maybe val))
 
 
 (defun maybe-get (maybe-val)
@@ -159,6 +159,7 @@ and return the result"
 
 (defun org-sgcal-clear-tokens ()
   "set org-sgcal-token-alist to nil"
+  (interactive)
   (setq org-sgcal-token-alist nil))
 
 (defun org-sgcal-fetch-all ()
@@ -258,7 +259,7 @@ It returns the code provided by the service."
 
 (defun org-sgcal-get-event-list (cid a-token client-secret min max)
   "Get event list from calendar"
-  (let ((data (maybe-error-make :tokenExpiredErr)))
+  (let ((data (maybe-error-make :unknownHttpErr)))
     (request
      (org-sgcal--get-events-url cid)
      :sync t
@@ -283,7 +284,7 @@ It returns the code provided by the service."
 (defun org-sgcal-post-event (cid a-token client-secret eid
 				 start end smry loc desc color-id)
   "post or update event in specify calendar(depends on eid). "
-  (let ((data (maybe-error-make :tokenExpiredErr))
+  (let ((data (maybe-error-make :unknownHttpErr))
         (stime (if (> (length start) 11) "dateTime" "date")))
     (cond ((and (equal stime "dateTime") (null end))
            (maybe-error-make :startDateTimeWithoutEnd))
@@ -324,7 +325,7 @@ It returns the code provided by the service."
 (defun org-sgcal-delete-event (cid a-token client-secret eid)
   "delete specify event from calendar"
   (if eid
-      (let ((out (maybe-error-make :tokenExpiredErr)))
+      (let ((out (maybe-error-make :unknownHttpErr)))
 	(request
 	 (concat (org-sgcal--get-events-url cid) "/" eid)
 	 :sync t
@@ -519,16 +520,22 @@ String to format that `data-to-time' can accept"
 				   (refresh-ret
 				    (funcall refresh-fun client-id client-secret rtoken title)))
 			     (maybe-map refresh-ret
-					(lambda (res)
-					  (setcdr (assq 'access_token account)
-						  (cdr (assq 'access_token res))))))
+					(lambda (_res)
+                                          (let ((res _res))
+                                            (setcdr (assq 'access_token account)
+                                                    (cdr (assq 'access_token res)))
+                                            (setcdr (assq 'expires_in account)
+                                                    (time-add (current-time) (seconds-to-time (cdr (assq 'expires_in res)))))
+                                            res))))
 			 (let ((request-ret (funcall request-fun client-id client-secret title)))
 			   (maybe-map request-ret
-				      (lambda (res)
-					(add-to-list 'org-sgcal-token-alist
-						     `(,(intern title) .
-						       ,res))
-					res))))))
+				      (lambda (_res_req)
+                                        (let ((res _res_req))
+                                          (setcdr (assq 'expires_in res)
+                                                  (time-add (current-time) (seconds-to-time (cdr (assq 'expires_in res)))))
+                                          (cl-pushnew `(,(intern title) . ,res)
+                                                      org-sgcal-token-alist)
+                                          res)))))))
 		 (maybe-error-make `(:tokenHeadingFormatErr ,title))))))))
 
 (defun org-sgcal--update-level3-headlines (get-events-fun)
@@ -542,43 +549,40 @@ This function will erase current buffer if success."
 	      (let ((title (substring-no-properties (car (org-element-property :title h1))))
 		    (client-id (org-element-property :CLIENT-ID h1))
 		    (client-secret (org-element-property :CLIENT-SECRET h1)))
-		(let ((account (assq (intern title) org-sgcal-token-alist)))
-		  (let* ((acount-data (cdr account))
-			 (atoken (cdr (assq 'access_token acount-data))))
-		    (let ((name (car (org-element-property :title h2)))
-			  (cid (org-element-property :CALENDAR-ID h2))
-                          (color-id (org-element-property :COLOR-ID h2))
-			  (max (convert-time-to-string
-				(decode-time
-				 (time-add
-				  (current-time)
-				  (days-to-time org-sgcal-up-days)))))
-			  (min (convert-time-to-string
-				(decode-time
-				 (time-subtract
-				  (current-time)
-				  (days-to-time org-sgcal-down-days)))))
-			  (new_h2))
-		      (cond ((null account) (maybe-error-make `(:fetchAllErr ,title)))
-			    ((equal "" name) (maybe-error-make :noCalHeadingErr))
-			    ((equal "" title) (maybe-error-make :noApiHeadingErr))
-			    (t 
-			     (maybe-map (funcall get-events-fun cid atoken client-secret min max)
-					(lambda (res)
-					  (setq new_h2
-						(org-sgcal--create-headline
-						 `(,name 2 nil)
-						 (cons `("CALENDAR-ID" . ,cid)
-                                                       (when color-id `(("COLOR-ID" . ,color-id))))))
-					  (setq new_h2
-						(apply #'org-element-adopt-elements
-						       new_h2
-						       (org-sgcal--parse-event-list
-							res 3)))
-					  (org-element-extract-element h2)
-					  (setq h1 (org-element-adopt-elements h1 new_h2))
-					  res))))))
-		  ))))))
+		(let ((atoken (org-sgcal--get-atoken title))
+                      (name (car (org-element-property :title h2)))
+                      (cid (org-element-property :CALENDAR-ID h2))
+                      (color-id (org-element-property :COLOR-ID h2))
+                      (max (convert-time-to-string
+                            (decode-time
+                             (time-add
+                              (current-time)
+                              (days-to-time org-sgcal-up-days)))))
+                      (min (convert-time-to-string
+                            (decode-time
+                             (time-subtract
+                              (current-time)
+                              (days-to-time org-sgcal-down-days)))))
+                      (new_h2))
+                  (cond ((equal "" name) (maybe-error-make :noCalHeadingErr))
+                        ((equal "" title) (maybe-error-make :noApiHeadingErr))
+                        (t 
+                         (maybe-map (funcall get-events-fun cid atoken client-secret min max)
+                                    (lambda (res)
+                                      (setq new_h2
+                                            (org-sgcal--create-headline
+                                             `(,name 2 nil)
+                                             (cons `("CALENDAR-ID" . ,cid)
+                                                   (when color-id `(("COLOR-ID" . ,color-id))))))
+                                      (setq new_h2
+                                            (apply #'org-element-adopt-elements
+                                                   new_h2
+                                                   (org-sgcal--parse-event-list
+                                                    res 3)))
+                                      (org-element-extract-element h2)
+                                      (setq h1 (org-element-adopt-elements h1 new_h2))
+                                      res)))))
+                )))))
       (erase-buffer)
       (insert (org-element-interpret-data ele))
       (org-indent-region (point-min) (point-max))
@@ -751,11 +755,10 @@ this function should format like
               (client-secret (plist-get props :client-secret))
               (title (plist-get props :title)))
           
-          (let* ((account (assq (intern title) org-sgcal-token-alist))
-                 (atoken (cdr (assq 'access_token account)))
-                 (smry (concat (when todo (concat todo " ")) name))
-                 (start-date (if start (convert-time-to-string start)))
-                 (end-date (cond (end (convert-time-to-string end))
+          (let ((atoken (org-sgcal--get-atoken title))
+                (smry (concat (when todo (concat todo " ")) name))
+                (start-date (if start (convert-time-to-string start)))
+                (end-date (cond (end (convert-time-to-string end))
                                  ((not start) nil)
                                  ((not (nth 2 start))
                                   (convert-time-to-string
@@ -764,7 +767,7 @@ this function should format like
 					 ,(nth 5 start)
 					 nil))))))
             (cond
-             ((not atoken) (maybe-error-make :notokenErr))
+             ((null atoken) (maybe-error-make `(:notokenErr ,title)))
              ((and cid
                    atoken
                    client-secret
@@ -847,10 +850,7 @@ apply delete-fun on heading with :DELETE: tag"
 	      (let* ((title (substring-no-properties (car (org-element-property :title h1))))
 		    (client-id (org-element-property :CLIENT-ID h1))
 		    (client-secret (org-element-property :CLIENT-SECRET h1))
-                    (account (assq (intern title) org-sgcal-token-alist))
-                    (acount-data (cdr account))
-                    (atoken (cdr (assq 'access_token acount-data)))
-                    
+                    (atoken (org-sgcal--get-atoken title))
                     (cname (car (org-element-property :title h2)))
                     (cid (org-element-property :CALENDAR-ID h2))
                     
@@ -915,8 +915,7 @@ apply delete-fun on heading with :DELETE: tag"
                  
                  ((equal "" cname) (maybe-error-make :noCalHeadingErr))
                  ((equal "" title) (maybe-error-make :noApiHeadingErr))
-                 ((null account) (maybe-error-make `(:fetchAllErr ,title)))
-                 ((not atoken) (maybe-error-make :notokenErr))
+                 ((null atoken) (maybe-error-make `(:notokenErr ,title)))
                  ((or (null cid)
                       (null atoken)
                       (null client-secret)
@@ -942,6 +941,17 @@ apply delete-fun on heading with :DELETE: tag"
       (insert (org-element-interpret-data ele))
       (org-indent-region (point-min) (point-max))
       res-list)))
+
+(defun org-sgcal--get-atoken (title)
+  "Get atoken from token-alist"
+  (let* ((account (assq (intern title) org-sgcal-token-alist))
+         (atoken (cdr (assq 'access_token account)))
+         (expires_in (cdr (assq 'expires_in account))))
+    (cond
+     ((null account) nil)
+     ((null expires_in) nil)
+     ((time-less-p (current-time) expires_in) atoken)
+     (t nil))))
 
 (provide 'org-sgcal)
 ;;; org-sgcal.el ends here
