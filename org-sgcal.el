@@ -193,12 +193,12 @@ This function will erase current buffer if success."
   "You can tag each head to :update: to update it or
  :delete: to delete it"
   (interactive)
-  (let ((err-list (org-sgcal--apply-at-tags #'org-sgcal-post-event #'org-sgcal-delete-event))))
-  (dolist (err (maybe-error-flatten err-list))
+  (let ((err-list (org-sgcal--apply-at-tags #'org-sgcal-post-event #'org-sgcal-delete-event)))
+    (dolist (err (maybe-error-flatten err-list))
       (let ((err-type (maybe-error-get err)))
 	(if err-type
 	    (message (maybe-error-string err-type))
-	  (message "update by tag success")))))
+	  (message "update by tag success"))))))
 
 ;;; http request functions
 (defun org-sgcal-request-authorization (client-id nickname)
