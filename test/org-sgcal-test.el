@@ -452,6 +452,23 @@ replace headline currectly"
 		    (car
 		     (maybe-error-flatten (org-sgcal--update-level3-headlines #'dummy-events-list)))))
                  :noCalHeadingErr))
+
+  (should (equal (with-temp-buffer
+                   (insert "* My self for test\n"
+			   "  :PROPERTIES:\n"
+			   "  :CLIENT-ID: test-client-id\n"
+			   "  :CLIENT-SECRET: test-client-secret\n"
+			   "  :END:\n"
+			   "** abcde\n"
+			   "   :PROPERTIES:\n"
+			   "   :CALENDAR-ID: test_cid\n"
+			   "   :END:\n")
+		   (org-sgcal-clear-tokens)
+		   (car
+                    (maybe-error-get
+                     (car
+                      (maybe-error-flatten (org-sgcal--update-level3-headlines #'dummy-events-list))))))
+                 :notokenErr))
   
   (should (equal (with-temp-buffer
 		   (insert "* My self for test\n"
