@@ -60,15 +60,15 @@
 						  "You should add an :DEADLINE to it with same format")
 		:deleteErr "No events it in properties of this heading"
 		:httpErr "Http error code: %s"
-		:notokenErr (concat "Can't find token for \"%s\"\n"
-                                    "Please run org-sgcal-clear-tokens org-sgcal-update-tokens")
+		:notokenErr ,(concat "Can't find token for \"%s\" "
+                                    "Please run org-sgcal-update-tokens")
 		:requestTokenErr "Fail on request token for \"%s\". Error code is %s."
 		:refreshTokenErr "Fail on refresh token for \"%s\". Error code is %s."
 		:tokenHeadingFormatErr "Fail because heading \"%s\" did not contain client-id or client-secret"
                 :applyAtPointErr "Point is not on any heading."
 		:noApiHeadingErr "Please give a name to your api heading"
 		:noCalHeadingErr "Pleave give a name to your canlendar heading"
-                :unknownHttpErr (concat "Unknown http error, maybe you can run "
+                :unknownHttpErr ,(concat "Unknown http error, maybe you can run "
                                         "org-sgcal-update-tokens and run again.")
                 :eid404Err "Can't find events with title \"%s\".".)
   "This list contains all error could happend in sgcal")
@@ -566,7 +566,8 @@ This function will erase current buffer if success."
                       (new_h2))
                   (cond ((equal "" name) (maybe-error-make :noCalHeadingErr))
                         ((equal "" title) (maybe-error-make :noApiHeadingErr))
-                        (t 
+                        ((null atoken) (maybe-error-make `(:notokenErr ,title)))
+                        (t
                          (maybe-map (funcall get-events-fun cid atoken client-secret min max)
                                     (lambda (res)
                                       (setq new_h2
@@ -581,8 +582,7 @@ This function will erase current buffer if success."
                                                     res 3)))
                                       (org-element-extract-element h2)
                                       (setq h1 (org-element-adopt-elements h1 new_h2))
-                                      res)))))
-                )))))
+                                      res))))))))))
       (erase-buffer)
       (insert (org-element-interpret-data ele))
       (org-indent-region (point-min) (point-max))
