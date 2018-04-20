@@ -884,9 +884,9 @@ apply delete-fun on heading with :DELETE: tag"
 					    nil)
 					nil)
 				      ))
-                    (desc (org-element-map h3 'paragraph
-                            (lambda (p) 
-                              (org-element-contents p)) nil t))
+                    (desc (car (org-element-map h3 'paragraph
+                                 (lambda (p) 
+                                   (org-element-contents p)) nil t)))
                     
                     (updated (org-element-property :UPDATED h3))
                     
@@ -927,7 +927,9 @@ apply delete-fun on heading with :DELETE: tag"
                     update-fun cid atoken client-secret
                     eid start-date end-date
                     smry nil desc
-                    (if todo (plist-get color-id (intern todo)) nil))
+                    (cond ((null todo) nil)
+                          ((null color-id) nil)
+                          (t (plist-get (car (read-from-string color-id)) todo))))
                    (lambda (item)
                      (org-element-set-element h3 (org-sgcal--parse-item item 3))
                      t)))
