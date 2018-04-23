@@ -61,6 +61,14 @@
 *** format
     Value of COLOR-ID is an elisp plist, for example, If we have COLOR-ID with (TODO 5 DONE 6), org-sgcal will set color-id=5 when you intend to post an event with TODO todo-keyword. And set color-id=6 when todo-keyword is DONE.
     
+** How to use the command org-sgcal-update-by-tag
+   I recommand you add 
+   #+BEGIN_EXAMPLE
+   #+TAGS: UPDATE(u) DELETE(d)
+   #+END_EXAMPLE
+   to begining of your org file.
+   Then you can tag your events by C-c C-c C-c u (update) or C-c C-c C-c d (delete),
+   and run org-sgcal-update-by-tag to update your event lists
 ** custommer varriables
 
 *** org-sgcal-timezone
